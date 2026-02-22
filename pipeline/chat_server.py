@@ -35,7 +35,7 @@ from pipeline.model_3d_server import router as model_3d_router, mount_3d_static
 # ── Config ───────────────────────────────────────────────────────────────
 
 GROQ_MODEL = os.getenv("GROQ_REASONING_MODEL", "llama-3.3-70b-versatile")
-PORT = int(os.getenv("API_PORT", "8100"))
+PORT = int(os.getenv("PORT", os.getenv("API_PORT", "8100")))
 
 app = FastAPI(title="F1 OmniSense API")
 app.add_middleware(

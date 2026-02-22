@@ -59,35 +59,39 @@ docker push "${IMAGE}"
 # ── Step 5: Deploy to Cloud Run ───────────────────────────
 echo "▸ Deploying to Cloud Run..."
 
-# Read env vars from .env (skip comments and empty lines)
-ENV_VARS=""
+# Build a YAML env-vars file from .env (handles URLs and special chars)
+ENV_FILE=$(mktemp /tmp/env-vars-XXXXXX.yaml)
+API_PORT="8100"   # default
 if [ -f .env ]; then
-  while IFS= read -r line; do
-    # Skip comments and empty lines
-    [[ "$line" =~ ^#.*$ || -z "$line" ]] && continue
-    # Skip lines with spaces in key (malformed)
-    key="${line%%=*}"
+  while IFS='=' read -r key value; do
+    # Skip comments, empty lines, malformed keys
+    [[ "$key" =~ ^#.*$ || -z "$key" ]] && continue
     [[ "$key" =~ [[:space:]] ]] && continue
-    if [ -z "$ENV_VARS" ]; then
-      ENV_VARS="${line}"
-    else
-      ENV_VARS="${ENV_VARS},${line}"
-    fi
+    # Capture API_PORT for Cloud Run --port flag
+    [[ "$key" == "API_PORT" ]] && API_PORT="$value"
+    # Quote the value to handle special chars
+    echo "${key}: '${value}'" >> "${ENV_FILE}"
   done < .env
 fi
+# Ensure API_PORT is set
+grep -q "^API_PORT:" "${ENV_FILE}" || echo "API_PORT: '${API_PORT}'" >> "${ENV_FILE}"
+
+echo "  Using port: ${API_PORT}"
 
 gcloud run deploy "${SERVICE_NAME}" \
   --image="${IMAGE}" \
   --region="${REGION}" \
   --platform=managed \
-  --port=8100 \
+  --port="${API_PORT}" \
   --memory=2Gi \
   --cpu=2 \
   --min-instances=0 \
   --max-instances=3 \
   --timeout=300s \
   --allow-unauthenticated \
-  --set-env-vars="API_PORT=8100,${ENV_VARS}"
+  --env-vars-file="${ENV_FILE}"
+
+rm -f "${ENV_FILE}"
 
 # ── Step 6: Get the URL ───────────────────────────────────
 BACKEND_URL=$(gcloud run services describe "${SERVICE_NAME}" \

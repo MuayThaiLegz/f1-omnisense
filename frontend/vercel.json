@@ -3,8 +3,8 @@
   "outputDirectory": "dist",
   "framework": "vite",
   "rewrites": [
-    { "source": "/api/:path(.*)", "destination": "https://f1-backend-XXXXX-uc.a.run.app/:path" },
-    { "source": "/3d-models/:path(.*)", "destination": "https://f1-backend-XXXXX-uc.a.run.app/3d-models/:path" },
+    { "source": "/api/:path(.*)", "destination": "https://f1-omnisense-backend-production.up.railway.app/:path" },
+    { "source": "/3d-models/:path(.*)", "destination": "https://f1-omnisense-backend-production.up.railway.app/3d-models/:path" },
     { "source": "/(.*)", "destination": "/index.html" }
   ],
   "headers": [
