@@ -13,8 +13,8 @@ frontend/.vercel/
 
 # ─── Data (too large for git) ─────────────────────────
 f1data/
-data/
-output/
+/data/
+/output/
 
 # ─── ML models & caches ──────────────────────────────
 *.pt
