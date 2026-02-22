@@ -839,37 +839,39 @@ async def openf1_intervals():
 
 @app.get("/api/local/openf1/pit")
 async def openf1_pit():
-    """Generate pit stop data from telemetry compound changes."""
+    """Generate pit stop data from telemetry stint boundaries."""
     db = get_data_db()
     driver_numbers = {"NOR": 4, "PIA": 81}
     pipeline_agg = [
-        {"$sort": {"LapNumber": 1}},
+        {"$match": {"Compound": {"$ne": None}}},
         {"$group": {
-            "_id": {"Driver": "$Driver", "Race": "$Race"},
-            "compounds": {"$push": "$Compound"},
-            "laps": {"$push": "$LapNumber"},
-            "dates": {"$push": "$Date"},
+            "_id": {"Driver": "$Driver", "Race": "$Race", "Compound": "$Compound"},
+            "min_lap": {"$min": "$LapNumber"},
         }},
+        {"$sort": {"_id.Race": 1, "_id.Driver": 1, "min_lap": 1}},
     ]
-    results = list(db["telemetry"].aggregate(pipeline_agg, allowDiskUse=True))
-    pits = []
+    results = list(db["telemetry"].aggregate(pipeline_agg))
+    from collections import defaultdict
+    driver_race_stints = defaultdict(list)
     for r in results:
         ident = r["_id"]
-        driver = ident.get("Driver", "")
-        compounds = r.get("compounds", [])
-        laps_list = r.get("laps", [])
-        dates = r.get("dates", [])
-        prev = None
-        for i, (comp, lap) in enumerate(zip(compounds, laps_list)):
-            if comp != prev and prev is not None:
-                pits.append({
-                    "session_key": 9000, "meeting_key": 9000,
-                    "driver_number": driver_numbers.get(driver, 0),
-                    "date": str(dates[i]) if i < len(dates) else "",
-                    "lap_number": int(lap) if lap else 0,
-                    "pit_duration": 23.5,
-                })
-            prev = comp
+        key = f'{ident["Driver"]}_{ident["Race"]}'
+        driver_race_stints[key].append({
+            "driver": ident["Driver"],
+            "min_lap": r.get("min_lap", 0) or 0,
+        })
+    pits = []
+    for key, stints in driver_race_stints.items():
+        stints.sort(key=lambda s: s["min_lap"])
+        for i in range(1, len(stints)):
+            driver = stints[i]["driver"]
+            pits.append({
+                "session_key": 9000, "meeting_key": 9000,
+                "driver_number": driver_numbers.get(driver, 0),
+                "date": "",
+                "lap_number": int(stints[i]["min_lap"]),
+                "pit_duration": 23.5,
+            })
     return pits
 
 @app.get("/api/local/openf1/stints")
@@ -1238,41 +1240,46 @@ async def mc_championship_teams(year: str):
 
 @app.get("/api/local/f1data/McStrategy/{year}/pit_stops.csv")
 async def mc_pit_stops(year: str):
-    """Generate pit stops CSV from telemetry compound changes.
+    """Generate pit stops CSV from telemetry stint boundaries.
     Frontend expects: meeting_name, driver_acronym, pit_duration
     """
     from starlette.responses import PlainTextResponse
     db = get_data_db()
-    # Use aggregation to find compound changes per driver per race
+    # Get stint boundaries (compound changes) without heavy $sort+$push
     pipeline_agg = [
-        {"$match": {"Year": year}},
-        {"$sort": {"LapNumber": 1}},
+        {"$match": {"Year": year, "Compound": {"$ne": None}}},
         {"$group": {
-            "_id": {"Driver": "$Driver", "Race": "$Race"},
-            "compounds": {"$push": "$Compound"},
-            "laps": {"$push": "$LapNumber"},
+            "_id": {"Driver": "$Driver", "Race": "$Race", "Compound": "$Compound"},
+            "min_lap": {"$min": "$LapNumber"},
+            "max_lap": {"$max": "$LapNumber"},
         }},
+        {"$sort": {"_id.Race": 1, "_id.Driver": 1, "min_lap": 1}},
     ]
-    results = list(db["telemetry"].aggregate(pipeline_agg, allowDiskUse=True))
-    headers = ["meeting_name", "driver_acronym", "pit_duration", "lap_number"]
-    lines = [",".join(headers)]
+    results = list(db["telemetry"].aggregate(pipeline_agg))
+    # Group by driver+race, sort stints by min_lap, pit stop = gap between stints
+    from collections import defaultdict
+    driver_race_stints = defaultdict(list)
     for r in results:
         ident = r["_id"]
-        driver = ident.get("Driver", "")
-        race = ident.get("Race", "")
-        if not race:
-            continue
-        race_name = race if "Grand Prix" in race else race + " Grand Prix"
-        compounds = r.get("compounds", [])
-        laps_list = r.get("laps", [])
-        prev = None
-        for i, comp in enumerate(compounds):
-            if comp != prev and prev is not None:
-                lap = int(laps_list[i]) if i < len(laps_list) and laps_list[i] else 0
-                # Estimate pit duration 22-28 seconds
-                pit_dur = round(22 + (hash(f"{driver}{race}{lap}") % 60) / 10, 1)
-                lines.append(",".join([race_name, driver, str(pit_dur), str(lap)]))
-            prev = comp
+        key = f'{ident["Driver"]}_{ident["Race"]}'
+        driver_race_stints[key].append({
+            "driver": ident["Driver"],
+            "race": ident["Race"],
+            "compound": ident["Compound"],
+            "min_lap": r.get("min_lap", 0) or 0,
+            "max_lap": r.get("max_lap", 0) or 0,
+        })
+    headers = ["meeting_name", "driver_acronym", "pit_duration", "lap_number"]
+    lines = [",".join(headers)]
+    for key, stints in driver_race_stints.items():
+        stints.sort(key=lambda s: s["min_lap"])
+        for i in range(1, len(stints)):
+            driver = stints[i]["driver"]
+            race = stints[i]["race"]
+            race_name = race if "Grand Prix" in race else race + " Grand Prix"
+            lap = int(stints[i]["min_lap"])
+            pit_dur = round(22 + (hash(f"{driver}{race}{lap}") % 60) / 10, 1)
+            lines.append(",".join([race_name, driver, str(pit_dur), str(lap)]))
     return PlainTextResponse("\n".join(lines))
 
 @app.get("/api/local/f1data/McResults/{year}/session_results.csv")
