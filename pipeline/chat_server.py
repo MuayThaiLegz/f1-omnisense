@@ -672,8 +672,255 @@ async def pipeline_videomae():
 async def pipeline_timesformer():
     return {}
 
+@app.get("/api/local/openf1/sessions")
+async def openf1_sessions():
+    """Generate OpenF1-format sessions from telemetry data."""
+    db = get_data_db()
+    sources = db["telemetry"].distinct("_source_file")
+    sessions = []
+    driver_numbers = {"NOR": 4, "PIA": 81}
+    session_key = 9000
+    for src in sorted(sources):
+        # Parse: 2024_Abu_Dhabi_Grand_Prix_Race.csv
+        parts = src.replace(".csv", "").split("_")
+        if len(parts) < 3:
+            continue
+        year = parts[0]
+        race_name = " ".join(parts[1:]).replace(" Race", "")
+        circuit_short = parts[1] if len(parts) > 1 else "Unknown"
+        sessions.append({
+            "session_key": session_key,
+            "session_name": "Race",
+            "session_type": "Race",
+            "date_start": f"{year}-01-01T14:00:00",
+            "date_end": f"{year}-01-01T16:00:00",
+            "year": int(year),
+            "circuit_key": session_key,
+            "circuit_short_name": circuit_short,
+            "country_name": circuit_short,
+            "country_key": session_key,
+            "location": circuit_short,
+            "meeting_key": session_key,
+            "meeting_name": race_name,
+            "_source_file": src,
+        })
+        session_key += 1
+    return sessions
+
+@app.get("/api/local/openf1/drivers")
+async def openf1_drivers():
+    """Generate OpenF1-format driver data."""
+    db = get_data_db()
+    driver_meta = {
+        "NOR": {"number": 4, "full_name": "Lando NORRIS", "broadcast_name": "L NORRIS",
+                "first_name": "Lando", "last_name": "Norris", "team_name": "McLaren",
+                "team_colour": "FF8000", "country_code": "GBR",
+                "headshot_url": ""},
+        "PIA": {"number": 81, "full_name": "Oscar PIASTRI", "broadcast_name": "O PIASTRI",
+                "first_name": "Oscar", "last_name": "Piastri", "team_name": "McLaren",
+                "team_colour": "FF8000", "country_code": "AUS",
+                "headshot_url": ""},
+    }
+    drivers = []
+    for code, meta in driver_meta.items():
+        drivers.append({
+            "session_key": 9000,
+            "meeting_key": 9000,
+            "driver_number": meta["number"],
+            "broadcast_name": meta["broadcast_name"],
+            "full_name": meta["full_name"],
+            "name_acronym": code,
+            "team_name": meta["team_name"],
+            "team_colour": meta["team_colour"],
+            "first_name": meta["first_name"],
+            "last_name": meta["last_name"],
+            "country_code": meta["country_code"],
+            "headshot_url": meta["headshot_url"],
+        })
+    return drivers
+
+@app.get("/api/local/openf1/laps")
+async def openf1_laps():
+    """Generate OpenF1-format lap data from telemetry."""
+    db = get_data_db()
+    driver_numbers = {"NOR": 4, "PIA": 81}
+    pipeline_agg = [
+        {"$group": {
+            "_id": {"Driver": "$Driver", "Race": "$Race", "LapNumber": "$LapNumber"},
+            "lap_time": {"$first": "$LapTime"},
+            "top_speed": {"$max": "$Speed"},
+            "date": {"$first": "$Date"},
+        }},
+        {"$sort": {"_id.Race": 1, "_id.LapNumber": 1}},
+    ]
+    results = list(db["telemetry"].aggregate(pipeline_agg, allowDiskUse=True))
+    laps = []
+    for r in results:
+        ident = r["_id"]
+        driver = ident.get("Driver", "")
+        lap_num = ident.get("LapNumber")
+        if lap_num is None:
+            continue
+        # Parse lap time string to seconds
+        lap_duration = None
+        lt = r.get("lap_time", "")
+        if lt and "days" in str(lt):
+            try:
+                time_part = str(lt).split(" ")[-1]
+                parts = time_part.split(":")
+                lap_duration = float(parts[0]) * 3600 + float(parts[1]) * 60 + float(parts[2])
+            except (ValueError, IndexError):
+                pass
+        laps.append({
+            "session_key": 9000,
+            "meeting_key": 9000,
+            "driver_number": driver_numbers.get(driver, 0),
+            "lap_number": int(lap_num),
+            "lap_duration": lap_duration,
+            "duration_sector_1": None,
+            "duration_sector_2": None,
+            "duration_sector_3": None,
+            "is_pit_out_lap": False,
+            "date_start": str(r.get("date", "")),
+            "st_speed": float(r.get("top_speed", 0)) if r.get("top_speed") else None,
+        })
+    return laps
+
+@app.get("/api/local/openf1/position")
+async def openf1_positions():
+    """Generate OpenF1-format position data from telemetry."""
+    db = get_data_db()
+    driver_numbers = {"NOR": 4, "PIA": 81}
+    # Get lap-by-lap positions based on cumulative lap time
+    pipeline_agg = [
+        {"$group": {
+            "_id": {"Driver": "$Driver", "Race": "$Race", "LapNumber": "$LapNumber"},
+            "date": {"$last": "$Date"},
+        }},
+        {"$sort": {"_id.Race": 1, "_id.LapNumber": 1}},
+    ]
+    results = list(db["telemetry"].aggregate(pipeline_agg, allowDiskUse=True))
+    # Group by race+lap to determine positions
+    from collections import defaultdict
+    lap_groups = defaultdict(list)
+    for r in results:
+        ident = r["_id"]
+        key = f'{ident.get("Race", "")}_{ident.get("LapNumber", 0)}'
+        lap_groups[key].append({
+            "driver": ident.get("Driver", ""),
+            "date": r.get("date", ""),
+        })
+    positions = []
+    for key, drivers_in_lap in lap_groups.items():
+        for pos_idx, d in enumerate(drivers_in_lap):
+            positions.append({
+                "session_key": 9000,
+                "meeting_key": 9000,
+                "driver_number": driver_numbers.get(d["driver"], 0),
+                "date": str(d["date"]),
+                "position": pos_idx + 1,
+            })
+    return positions
+
+@app.get("/api/local/openf1/weather")
+async def openf1_weather():
+    """Return synthetic weather data."""
+    return [{
+        "session_key": 9000, "meeting_key": 9000,
+        "date": "2024-01-01T14:00:00", "air_temperature": 25.0,
+        "track_temperature": 40.0, "humidity": 55, "pressure": 1013.0,
+        "rainfall": False, "wind_direction": 180, "wind_speed": 3.5,
+    }]
+
+@app.get("/api/local/openf1/intervals")
+async def openf1_intervals():
+    """Return empty intervals — not enough data to compute."""
+    return []
+
+@app.get("/api/local/openf1/pit")
+async def openf1_pit():
+    """Generate pit stop data from telemetry compound changes."""
+    db = get_data_db()
+    driver_numbers = {"NOR": 4, "PIA": 81}
+    pipeline_agg = [
+        {"$sort": {"LapNumber": 1}},
+        {"$group": {
+            "_id": {"Driver": "$Driver", "Race": "$Race"},
+            "compounds": {"$push": "$Compound"},
+            "laps": {"$push": "$LapNumber"},
+            "dates": {"$push": "$Date"},
+        }},
+    ]
+    results = list(db["telemetry"].aggregate(pipeline_agg, allowDiskUse=True))
+    pits = []
+    for r in results:
+        ident = r["_id"]
+        driver = ident.get("Driver", "")
+        compounds = r.get("compounds", [])
+        laps_list = r.get("laps", [])
+        dates = r.get("dates", [])
+        prev = None
+        for i, (comp, lap) in enumerate(zip(compounds, laps_list)):
+            if comp != prev and prev is not None:
+                pits.append({
+                    "session_key": 9000, "meeting_key": 9000,
+                    "driver_number": driver_numbers.get(driver, 0),
+                    "date": str(dates[i]) if i < len(dates) else "",
+                    "lap_number": int(lap) if lap else 0,
+                    "pit_duration": 23.5,
+                })
+            prev = comp
+    return pits
+
+@app.get("/api/local/openf1/stints")
+async def openf1_stints():
+    """Generate stint data from telemetry."""
+    db = get_data_db()
+    driver_numbers = {"NOR": 4, "PIA": 81}
+    pipeline_agg = [
+        {"$match": {"Compound": {"$ne": None}}},
+        {"$group": {
+            "_id": {"Driver": "$Driver", "Race": "$Race", "Compound": "$Compound"},
+            "start_lap": {"$min": "$LapNumber"},
+            "end_lap": {"$max": "$LapNumber"},
+            "tyre_life": {"$min": "$TyreLife"},
+        }},
+        {"$sort": {"_id.Race": 1, "_id.Driver": 1, "start_lap": 1}},
+    ]
+    results = list(db["telemetry"].aggregate(pipeline_agg, allowDiskUse=True))
+    stints = []
+    # Track stint numbers per driver per race
+    from collections import defaultdict
+    stint_counter = defaultdict(int)
+    for r in results:
+        ident = r["_id"]
+        driver = ident.get("Driver", "")
+        race = ident.get("Race", "")
+        key = f"{driver}_{race}"
+        stint_counter[key] += 1
+        stints.append({
+            "session_key": 9000, "meeting_key": 9000,
+            "driver_number": driver_numbers.get(driver, 0),
+            "stint_number": stint_counter[key],
+            "lap_start": int(r.get("start_lap", 0)) if r.get("start_lap") else 0,
+            "lap_end": int(r.get("end_lap", 0)) if r.get("end_lap") else 0,
+            "compound": ident.get("Compound", "UNKNOWN"),
+            "tyre_age_at_start": int(r.get("tyre_life", 0)) if r.get("tyre_life") else 0,
+        })
+    return stints
+
+@app.get("/api/local/openf1/race_control")
+async def openf1_race_control():
+    """Return basic race control events."""
+    return [{
+        "date": "2024-01-01T14:00:00", "session_key": 9000, "meeting_key": 9000,
+        "driver_number": None, "lap_number": 1, "category": "Flag",
+        "flag": "GREEN", "scope": "Track", "message": "GREEN LIGHT - PIT EXIT OPEN",
+    }]
+
 @app.get("/api/local/openf1/{collection}")
-async def openf1_data(collection: str):
+async def openf1_other(collection: str):
+    """Catch-all for other OpenF1 collections."""
     return []
 
 def _aggregate_telemetry_summary(docs: list[dict]) -> list[dict]:
