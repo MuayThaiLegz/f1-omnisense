@@ -1,0 +1,42 @@
+# F1 OmniSense — Python backend dependencies
+# torch/torchvision are installed separately with --index-url for CPU-only builds
+
+# Web framework
+fastapi==0.129.0
+uvicorn==0.41.0
+starlette==0.52.1
+python-multipart==0.0.22
+anyio==4.12.1
+
+# LLM & AI
+groq==1.0.0
+sentence-transformers==5.2.3
+transformers==4.47.1
+tokenizers==0.21.4
+safetensors==0.7.0
+open-clip-torch==3.2.0
+
+# Database
+pymongo==4.16.0
+
+# Data processing
+numpy==2.4.2
+scipy==1.17.0
+scikit-learn==1.8.0
+pillow==12.1.0
+pydantic==2.12.5
+
+# Document parsing
+PyMuPDF==1.27.1
+python-docx==1.2.0
+
+# Utilities
+python-dotenv==1.2.1
+requests==2.32.5
+httpx==0.28.1
+httpcore==1.0.9
+tqdm==4.67.3
+
+# LangChain (text splitting only)
+langchain-core==1.2.14
+langchain-text-splitters==1.1.1

@@ -1,0 +1,431 @@
+import { useState, useEffect, useMemo } from 'react';
+import {
+  AlertTriangle, CheckCircle2, XCircle, Activity,
+  Thermometer, Gauge, Zap, CircleDot, Shield, TrendingUp,
+  Cpu, Disc, Cog, Wrench,
+} from 'lucide-react';
+// NOTE: ModelGen3D (AI 3D model generation) is available — re-enable in settings/admin panel
+// import { ModelGen3D } from './ModelGen3D';
+
+// ─── Types (aligned with anomaly_scores.json) ──────────────────────
+type HealthLevel = 'nominal' | 'warning' | 'critical';
+
+interface SystemHealth {
+  name: string;
+  icon: React.ElementType;
+  health: number;
+  level: HealthLevel;
+  details: string;
+  voteCount: number;
+  totalModels: number;
+  metrics: { label: string; value: string }[];
+}
+
+interface RaceHealth {
+  race: string;
+  systems: Record<string, {
+    health: number;
+    level: string;
+    vote_severity: string;
+    score_mean: number;
+    voting_score: number;
+    vote_count: number;
+    total_models: number;
+    top_model: string;
+    features: Record<string, number>;
+  }>;
+}
+
+interface VehicleData {
+  driver: string;
+  number: number;
+  code: string;
+  overallHealth: number;
+  level: HealthLevel;
+  lastRace: string;
+  systems: SystemHealth[];
+  races: RaceHealth[];
+}
+
+// ─── Map anomaly levels to UI levels ────────────────────────────────
+const SYSTEM_ICONS: Record<string, React.ElementType> = {
+  'Power Unit': Zap,
+  'Brakes': Disc,
+  'Drivetrain': Cog,
+  'Suspension': Wrench,
+  'Thermal': Thermometer,
+  'Electronics': Cpu,
+};
+
+function mapLevel(anomalyLevel: string): HealthLevel {
+  switch (anomalyLevel) {
+    case 'critical':
+    case 'high':
+      return 'critical';
+    case 'medium':
+      return 'warning';
+    default:
+      return 'nominal';
+  }
+}
+
+function buildSystemHealth(
+  sysName: string,
+  data: RaceHealth['systems'][string],
+): SystemHealth {
+  const level = mapLevel(data.level);
+  const featureEntries = Object.entries(data.features);
+  const details = featureEntries.map(([k, v]) => `${k}: ${v}`).join(', ') || `Score: ${data.score_mean.toFixed(3)}`;
+
+  return {
+    name: sysName,
+    icon: SYSTEM_ICONS[sysName] ?? Cpu,
+    health: data.health,
+    level,
+    details,
+    voteCount: data.vote_count,
+    totalModels: data.total_models,
+    metrics: [
+      ...featureEntries.map(([k, v]) => ({ label: k, value: String(v) })),
+      { label: 'Confidence', value: `${data.vote_count}/${data.total_models}` },
+    ],
+  };
+}
+
+const levelColor = (l: HealthLevel) =>
+  l === 'nominal' ? '#22c55e' : l === 'warning' ? '#FF8000' : '#ef4444';
+
+const levelBg = (l: HealthLevel) =>
+  l === 'nominal' ? 'rgba(34,197,94,0.08)' : l === 'warning' ? 'rgba(255,128,0,0.08)' : 'rgba(239,68,68,0.08)';
+
+
+// 3D car models — mapped per driver number
+// Available: mcl38.glb (2024), mcl39.glb (2025), mcl60.glb (2023)
+const DRIVER_CAR_MODEL: Record<number, { label: string; url: string }> = {
+  4:  { label: 'MCL38', url: '/models/mcl38.glb' },   // NOR — 2024 car
+  81: { label: 'MCL39', url: '/models/mcl39.glb' },   // PIA — 2025 car
+};
+
+// NOTE: Car3DViewer standalone section removed from fleet grid view.
+// ModelGen3D (AI 3D generation) can be re-enabled in a settings/admin panel.
+
+// ─── Component ──────────────────────────────────────────────────────
+export function FleetOverview() {
+  const [vehicles, setVehicles] = useState<VehicleData[]>([]);
+  const [selectedCar, setSelectedCar] = useState<VehicleData | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const res = await fetch('/api/local/pipeline/anomaly');
+        const data = await res.json();
+        const mapped: VehicleData[] = (data.drivers ?? []).map((d: any) => {
+          const latestRace: RaceHealth | undefined = d.races?.[d.races.length - 1];
+          const systems: SystemHealth[] = latestRace
+            ? Object.entries(latestRace.systems).map(([name, sysData]) =>
+                buildSystemHealth(name, sysData as RaceHealth['systems'][string])
+              )
+            : [];
+
+          return {
+            driver: d.driver,
+            number: d.number,
+            code: d.code,
+            overallHealth: d.overall_health,
+            level: mapLevel(d.overall_level),
+            lastRace: d.last_race,
+            systems,
+            races: d.races ?? [],
+          };
+        });
+
+        setVehicles(mapped);
+      } catch (err) {
+        console.error('Fleet anomaly data load error:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, []);
+
+  // Race-by-race trend from anomaly data
+  const trendData = useMemo(() => {
+    if (!selectedCar) return [];
+    return selectedCar.races.map(r => {
+      const systems = r.systems;
+      const puFeats = systems['Power Unit']?.features ?? {};
+      const brakeFeats = systems['Brakes']?.features ?? {};
+      const thermalFeats = systems['Thermal']?.features ?? {};
+      return {
+        race: r.race,
+        puHealth: systems['Power Unit']?.health ?? 0,
+        brakeHealth: systems['Brakes']?.health ?? 0,
+        dtHealth: systems['Drivetrain']?.health ?? 0,
+        suspHealth: systems['Suspension']?.health ?? 0,
+        thermalHealth: systems['Thermal']?.health ?? 0,
+        elecHealth: systems['Electronics']?.health ?? 0,
+        rpm: puFeats['RPM'] ?? 0,
+        speed: brakeFeats['Speed'] ?? 0,
+        cockpitTemp: thermalFeats['CockpitTemp_C'] ?? 0,
+        heartRate: thermalFeats['HeartRate_bpm'] ?? 0,
+      };
+    });
+  }, [selectedCar]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Activity className="w-5 h-5 text-[#FF8000] animate-spin" />
+        <span className="ml-2 text-sm text-muted-foreground">Loading anomaly detection data...</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Fleet status bar */}
+      <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 bg-[#12121e] rounded-lg px-3 py-2 border border-[rgba(255,128,0,0.08)]">
+          <CircleDot className="w-3 h-3 text-[#FF8000]" />
+          <span className="text-[10px] text-muted-foreground">{vehicles.length} vehicles</span>
+        </div>
+        {(['nominal', 'warning', 'critical'] as HealthLevel[]).map(level => {
+          const count = vehicles.filter(v => v.level === level).length;
+          if (count === 0) return null;
+          return (
+            <div key={level} className="flex items-center gap-1.5 text-[10px]">
+              <div className="w-2 h-2 rounded-full" style={{ background: levelColor(level) }} />
+              <span style={{ color: levelColor(level) }}>{count} {level}</span>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Driver cards — always visible, clickable to select */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {vehicles.map(v => {
+          const isSelected = selectedCar?.number === v.number;
+          return (
+            <button
+              key={v.number}
+              onClick={() => setSelectedCar(isSelected ? null : v)}
+              className={`text-left bg-[#12121e] rounded-xl border p-5 transition-all group ${
+                isSelected
+                  ? 'border-[#FF8000] ring-1 ring-[#FF8000]/30 shadow-[0_0_20px_rgba(255,128,0,0.1)]'
+                  : 'border-[rgba(255,128,0,0.08)] hover:border-[rgba(255,128,0,0.2)]'
+              }`}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-sm font-bold font-mono ${
+                    isSelected ? 'bg-[#FF8000]/15 text-[#FF8000] border border-[#FF8000]/40' : ''
+                  }`}
+                    style={!isSelected ? { background: levelBg(v.level), color: levelColor(v.level), border: `1px solid ${levelColor(v.level)}22` } : undefined}>
+                    #{v.number}
+                  </div>
+                  <div>
+                    <div className={`text-sm font-medium transition-colors ${
+                      isSelected ? 'text-[#FF8000]' : 'text-foreground group-hover:text-[#FF8000]'
+                    }`}>{v.driver}</div>
+                    <div className="text-[10px] text-muted-foreground">McLaren {(DRIVER_CAR_MODEL[v.number] ?? DRIVER_CAR_MODEL[4]).label} · Last: {v.lastRace}</div>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-lg font-mono font-bold" style={{ color: levelColor(v.level) }}>
+                    {v.overallHealth}%
+                  </div>
+                  <div className="text-[9px] uppercase tracking-wider" style={{ color: levelColor(v.level) }}>
+                    {v.level}
+                  </div>
+                </div>
+              </div>
+
+              {/* Overall health bar */}
+              <div className="h-2 bg-[#0a0a12] rounded-full overflow-hidden mb-4">
+                <div
+                  className="h-full rounded-full transition-all duration-700"
+                  style={{ width: `${v.overallHealth}%`, background: `linear-gradient(90deg, ${levelColor(v.level)}, ${levelColor(v.level)}88)` }}
+                />
+              </div>
+
+              {/* System mini-bars */}
+              <div className="grid grid-cols-3 gap-2">
+                {v.systems.map(sys => {
+                  const Icon = sys.icon;
+                  return (
+                    <div key={sys.name} className="bg-[#0a0a12] rounded-lg p-2">
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <Icon className="w-2.5 h-2.5" style={{ color: levelColor(sys.level) }} />
+                        <span className="text-[8px] text-muted-foreground truncate">{sys.name}</span>
+                      </div>
+                      <div className="h-1 bg-[#1a1a2e] rounded-full overflow-hidden">
+                        <div className="h-full rounded-full" style={{ width: `${sys.health}%`, background: levelColor(sys.level) }} />
+                      </div>
+                      <div className="text-[9px] font-mono mt-0.5" style={{ color: levelColor(sys.level) }}>{sys.health}%</div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Selection indicator */}
+              <div className={`mt-3 flex items-center justify-end gap-1 text-[9px] transition-colors ${
+                isSelected
+                  ? 'text-[#FF8000]/70'
+                  : 'text-muted-foreground/50 group-hover:text-[#FF8000]/60'
+              }`}>
+                {isSelected ? 'Selected — click to collapse' : 'Click for details'}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* ─── Detail Section — inline below cards when a driver is selected ─── */}
+      {selectedCar && (
+        <div className="space-y-4">
+          {/* Section divider with driver name */}
+          <div className="flex items-center gap-3 pt-2">
+            <div className="h-px flex-1 bg-gradient-to-r from-[#FF8000]/30 to-transparent" />
+            <div className="flex items-center gap-2">
+              <div className="w-2.5 h-2.5 rounded-full" style={{ background: levelColor(selectedCar.level) }} />
+              <span className="text-xs font-medium text-[#FF8000]">#{selectedCar.number} {selectedCar.driver}</span>
+              <span className="text-xs font-mono" style={{ color: levelColor(selectedCar.level) }}>
+                {selectedCar.overallHealth}% Overall
+              </span>
+            </div>
+            <div className="h-px flex-1 bg-gradient-to-l from-[#FF8000]/30 to-transparent" />
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            {/* Stress Heatmap + 3D Model — takes 2/3 */}
+            <div className="lg:col-span-2 space-y-4">
+              <div className="bg-[#12121e] rounded-xl border border-[rgba(255,128,0,0.08)] p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-xs font-medium text-foreground flex items-center gap-2">
+                    <Shield className="w-3.5 h-3.5 text-[#FF8000]" />
+                    Vehicle Stress Heatmap
+                  </h3>
+                </div>
+
+                {/* 3D model with stress hotspots rendered in Three.js */}
+                <div className="rounded-lg overflow-hidden border border-[rgba(255,128,0,0.06)]">
+                  {(() => {
+                    const carModel = DRIVER_CAR_MODEL[selectedCar.number] ?? DRIVER_CAR_MODEL[4];
+                    return (
+                      <iframe
+                        src={`/glb_viewer.html?url=${carModel.url}&title=${encodeURIComponent(carModel.label)}&stress=${encodeURIComponent(JSON.stringify(selectedCar.systems.map(s => ({ name: s.name, health: s.health, level: s.level, metrics: s.metrics }))))}`}
+                        className="w-full h-[500px] border-0 bg-[#0a0a12]"
+                        title={`3D — ${carModel.label}`}
+                      />
+                    );
+                  })()}
+                </div>
+
+                <div className="flex justify-center gap-4 mt-3">
+                  {(['nominal', 'warning', 'critical'] as HealthLevel[]).map(l => (
+                    <div key={l} className="flex items-center gap-1.5">
+                      <div className="w-2 h-2 rounded-full" style={{ background: levelColor(l) }} />
+                      <span className="text-[9px] text-muted-foreground capitalize">{l}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* System Summary — compact 1/3 sidebar */}
+            <div className="lg:col-span-1 bg-[#12121e] rounded-xl border border-[rgba(255,128,0,0.08)] p-3">
+              <h3 className="text-[10px] font-medium text-foreground mb-2 flex items-center gap-1.5">
+                <Gauge className="w-3 h-3 text-[#FF8000]" />
+                System Health
+              </h3>
+              <div className="space-y-1.5">
+                {selectedCar.systems.map(sys => {
+                  const Icon = sys.icon;
+                  return (
+                    <div key={sys.name} className="rounded-lg p-2 border" style={{ background: levelBg(sys.level), borderColor: `${levelColor(sys.level)}15` }}>
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center gap-1.5">
+                          <Icon className="w-3 h-3" style={{ color: levelColor(sys.level) }} />
+                          <span className="text-[10px] font-medium text-foreground">{sys.name}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[10px] font-mono font-semibold" style={{ color: levelColor(sys.level) }}>
+                            {sys.health}%
+                          </span>
+                          {sys.level === 'nominal' && <CheckCircle2 className="w-2.5 h-2.5 text-green-400" />}
+                          {sys.level === 'warning' && <AlertTriangle className="w-2.5 h-2.5 text-[#FF8000]" />}
+                          {sys.level === 'critical' && <XCircle className="w-2.5 h-2.5 text-red-400" />}
+                        </div>
+                      </div>
+                      <div className="h-1 bg-[#0a0a12] rounded-full overflow-hidden">
+                        <div
+                          className="h-full rounded-full transition-all duration-700"
+                          style={{ width: `${sys.health}%`, background: levelColor(sys.level) }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* Race-by-race anomaly trend — compact */}
+          {trendData.length > 0 && (
+            <div className="bg-[#12121e] rounded-xl border border-[rgba(255,128,0,0.08)] p-3">
+              <h3 className="text-[10px] font-medium text-foreground mb-2 flex items-center gap-1.5">
+                <TrendingUp className="w-3 h-3 text-[#FF8000]" />
+                Season Health Trend
+              </h3>
+              <div className="overflow-x-auto">
+                <table className="w-full text-[9px]">
+                  <thead className="sticky top-0 bg-[#12121e]">
+                    <tr className="border-b border-[rgba(255,128,0,0.08)]">
+                      <th className="text-left py-1 text-muted-foreground font-normal">Race</th>
+                      <th className="text-right py-1 text-muted-foreground font-normal">PU</th>
+                      <th className="text-right py-1 text-muted-foreground font-normal">Brakes</th>
+                      <th className="text-right py-1 text-muted-foreground font-normal">DT</th>
+                      <th className="text-right py-1 text-muted-foreground font-normal">Susp</th>
+                      <th className="text-right py-1 text-muted-foreground font-normal">Therm</th>
+                      <th className="text-right py-1 text-muted-foreground font-normal">Elec</th>
+                      <th className="text-right py-1 text-muted-foreground font-normal">RPM</th>
+                      <th className="text-right py-1 text-muted-foreground font-normal">°C</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {trendData.map((d, i) => {
+                      const healthColor = (h: number) => h >= 75 ? '#22c55e' : h >= 50 ? '#FF8000' : '#ef4444';
+                      return (
+                        <tr key={i} className="border-b border-[rgba(255,128,0,0.04)] hover:bg-[rgba(255,128,0,0.02)]">
+                          <td className="py-0.5 text-foreground">{d.race}</td>
+                          <td className="py-0.5 text-right font-mono" style={{ color: healthColor(d.puHealth) }}>{d.puHealth}%</td>
+                          <td className="py-0.5 text-right font-mono" style={{ color: healthColor(d.brakeHealth) }}>{d.brakeHealth}%</td>
+                          <td className="py-0.5 text-right font-mono" style={{ color: healthColor(d.dtHealth) }}>{d.dtHealth}%</td>
+                          <td className="py-0.5 text-right font-mono" style={{ color: healthColor(d.suspHealth) }}>{d.suspHealth}%</td>
+                          <td className="py-0.5 text-right font-mono" style={{ color: healthColor(d.thermalHealth) }}>{d.thermalHealth}%</td>
+                          <td className="py-0.5 text-right font-mono" style={{ color: healthColor(d.elecHealth) }}>{d.elecHealth}%</td>
+                          <td className="py-0.5 text-right font-mono text-foreground">{d.rpm ? Math.round(d.rpm).toLocaleString() : '—'}</td>
+                          <td className="py-0.5 text-right font-mono" style={{ color: d.cockpitTemp > 42 ? '#ef4444' : d.cockpitTemp > 38 ? '#FF8000' : '#22c55e' }}>
+                            {d.cockpitTemp ? `${d.cockpitTemp}°` : '—'}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+        </div>
+      )}
+
+      {/* NOTE: 3D Car Models viewer and AI Model Generation are available
+         but hidden from the default fleet view. They can be re-enabled in
+         a settings/admin panel. Components: <Car3DViewer /> and <ModelGen3D /> */}
+    </div>
+  );
+}

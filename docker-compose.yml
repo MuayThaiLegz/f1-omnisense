@@ -1,0 +1,64 @@
+name: f1-omnisense
+
+networks:
+  f1net:
+    driver: bridge
+
+volumes:
+  hf-cache:
+
+services:
+
+  # ── Backend: FastAPI + sentence-transformers + CLIP ──────
+  backend:
+    build:
+      context: .
+      dockerfile: pipeline/Dockerfile
+    container_name: f1-backend
+    networks:
+      - f1net
+    ports:
+      - "8100:8100"
+    env_file:
+      - .env
+    environment:
+      - API_PORT=8100
+    volumes:
+      - ./f1data:/app/f1data:ro
+      - ./pipeline/output:/app/pipeline/output
+      - ./output:/app/output
+      - ./data:/app/data:ro
+      - hf-cache:/root/.cache/huggingface
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request; urllib.request.urlopen('http://localhost:8100/health')"]
+      interval: 30s
+      timeout: 15s
+      retries: 5
+      start_period: 120s
+    restart: unless-stopped
+
+  # ── Frontend: nginx serving Vite build ──────────────────
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      args:
+        GROQ_API_KEY: ${GROQ_API_KEY:-}
+    container_name: f1-frontend
+    networks:
+      - f1net
+    ports:
+      - "80:80"
+    volumes:
+      - ./frontend/public/models:/usr/share/nginx/models:ro
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    restart: unless-stopped

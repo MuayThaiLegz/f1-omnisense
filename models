@@ -1,0 +1,28 @@
+🥇 Primary Brain — MiniCPM-V 4.5 (Always-On)
+
+~5–6GB VRAM at Q4 — leaves 6GB free for RF-DETR + SAM2
+Outperforms GPT-4o-latest, Gemini-2.0 Pro, and Qwen2.5-VL-72B at only 4.1B params GitHub
+The only model that runs concurrently with your detection stack on 12GB
+Use case: continuous scene narration, tire commentary, pit lane description
+openbmb/MiniCPM-V-4.5
+
+
+🥈 Analysis Brain — Qwen3-VL-8B AWQ (Triggered)
+
+~6.5–7GB at AWQ 4-bit — solo or with lightweight detection only
+Best structured JSON output, native bounding boxes, strongest reasoning at 8B class
+3D spatial grounding, GUI agent capability, tool invocation — confirmed in released weights Hugging Face
+Use case: swap in when incident fires, pit strategy deep analysis, tire wear reasoning
+Qwen/Qwen3-VL-8B-Instruct + AWQ quant from QuantTrio
+
+
+🥉 Reasoning Alternative — InternVL3.5-8B INT4 (Triggered)
+
+~9GB at INT4 — solo only on 12GB, no room for detectors alongside
+Scores 60.3 on the multi-image benchmark suite arXiv — strongest multi-image reasoning at 8B scale
+Better than Qwen3-VL-8B on multi-frame video inputs specifically
+Use case: post-lap multi-frame tire degradation analysis, cross-camera tracking
+OpenGVLab/InternVL3_5-8B
+
+
+<div class="sketchfab-embed-wrapper"> <iframe title="F1 McLaren F1 TEAM Steering Wheel" frameborder="0" allowfullscreen mozallowfullscreen="true" webkitallowfullscreen="true" allow="autoplay; fullscreen; xr-spatial-tracking" xr-spatial-tracking execution-while-out-of-viewport execution-while-not-rendered web-share src="https://sketchfab.com/models/a7d467160382412eb75baaf20f3e7903/embed"> </iframe> <p style="font-size: 13px; font-weight: normal; margin: 5px; color: #4A4A4A;"> <a href="https://sketchfab.com/3d-models/f1-mclaren-f1-team-steering-wheel-a7d467160382412eb75baaf20f3e7903?utm_medium=embed&utm_campaign=share-popup&utm_content=a7d467160382412eb75baaf20f3e7903" target="_blank" rel="nofollow" style="font-weight: bold; color: #1CAAD9;"> F1 McLaren F1 TEAM Steering Wheel </a> by <a href="https://sketchfab.com/davidbabayan202?utm_medium=embed&utm_campaign=share-popup&utm_content=a7d467160382412eb75baaf20f3e7903" target="_blank" rel="nofollow" style="font-weight: bold; color: #1CAAD9;"> David Babayan </a> on <a href="https://sketchfab.com?utm_medium=embed&utm_campaign=share-popup&utm_content=a7d467160382412eb75baaf20f3e7903" target="_blank" rel="nofollow" style="font-weight: bold; color: #1CAAD9;">Sketchfab</a></p></div>

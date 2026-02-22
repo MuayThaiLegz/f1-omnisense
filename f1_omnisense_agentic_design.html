@@ -1,0 +1,1267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>F1 OmniSense Agentic Design</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&family=DM+Sans:wght@300;400;500&display=swap');
+
+  :root {
+    --mclaren-orange: #FF8000;
+    --mclaren-dark: #0A0A0A;
+    --mclaren-grey: #1A1A1A;
+    --mclaren-mid: #2A2A2A;
+    --datasense: #3B82F6;
+    --mediasense: #EF4444;
+    --agent: #10B981;
+    --redis: #FF6B35;
+    --text: #E5E5E5;
+    --dim: #777;
+    --accent: #FF8000;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--mclaren-dark);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    overflow-x: hidden;
+  }
+
+  /* Header */
+  .header {
+    background: linear-gradient(135deg, #0A0A0A 0%, #1a0a00 50%, #0A0A0A 100%);
+    border-bottom: 2px solid var(--mclaren-orange);
+    padding: 40px 60px 30px;
+    position: relative;
+    overflow: hidden;
+  }
+  .header::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -10%;
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, rgba(255,128,0,0.08) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .header-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .logo-area h1 {
+    font-family: 'Orbitron', monospace;
+    font-size: 28px;
+    font-weight: 900;
+    color: var(--mclaren-orange);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+  }
+  .logo-area p {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: var(--dim);
+    letter-spacing: 2px;
+    margin-top: 4px;
+  }
+  .live-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255,128,0,0.1);
+    border: 1px solid var(--mclaren-orange);
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-family: 'Orbitron', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    color: var(--mclaren-orange);
+  }
+  .live-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #FF8000;
+    animation: pulse 1.2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.8); }
+  }
+
+  .subtitle {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 13px;
+    color: var(--dim);
+    letter-spacing: 1px;
+    margin-top: 8px;
+  }
+
+  /* Nav tabs */
+  .tabs {
+    display: flex;
+    gap: 4px;
+    padding: 20px 60px 0;
+    background: var(--mclaren-grey);
+    border-bottom: 1px solid #333;
+    overflow-x: auto;
+  }
+  .tab {
+    padding: 12px 24px;
+    font-family: 'Orbitron', monospace;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    color: var(--dim);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    white-space: nowrap;
+    transition: all 0.2s;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--mclaren-orange); border-bottom-color: var(--mclaren-orange); }
+
+  /* Main layout */
+  .content { padding: 40px 60px; }
+  .section { display: none; }
+  .section.active { display: block; }
+
+  /* Section headers */
+  .section-title {
+    font-family: 'Orbitron', monospace;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--mclaren-orange);
+    letter-spacing: 2px;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+  }
+  .section-desc {
+    color: var(--dim);
+    font-size: 14px;
+    margin-bottom: 32px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.5px;
+    line-height: 1.6;
+    max-width: 800px;
+  }
+
+  /* Architecture diagram */
+  .arch-grid {
+    display: grid;
+    grid-template-rows: auto auto auto auto auto;
+    gap: 2px;
+  }
+
+  .arch-row {
+    display: grid;
+    gap: 2px;
+  }
+
+  .arch-layer-label {
+    font-family: 'Orbitron', monospace;
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--dim);
+    text-transform: uppercase;
+    padding: 8px 0 4px;
+    border-top: 1px solid #2a2a2a;
+    margin-top: 8px;
+  }
+
+  .arch-box {
+    background: var(--mclaren-grey);
+    border: 1px solid #333;
+    border-radius: 6px;
+    padding: 14px 16px;
+    position: relative;
+    transition: all 0.2s;
+    cursor: default;
+  }
+  .arch-box:hover {
+    border-color: var(--mclaren-orange);
+    background: #1f1f1f;
+    transform: translateY(-1px);
+    z-index: 2;
+  }
+  .arch-box.datasense { border-left: 3px solid var(--datasense); }
+  .arch-box.mediasense { border-left: 3px solid var(--mediasense); }
+  .arch-box.agent { border-left: 3px solid var(--agent); }
+  .arch-box.redis { border-left: 3px solid var(--redis); }
+  .arch-box.core { border-left: 3px solid var(--mclaren-orange); }
+  .arch-box.new { border-left: 3px solid #A855F7; }
+
+  .box-title {
+    font-family: 'Orbitron', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+  }
+  .box-title.datasense { color: var(--datasense); }
+  .box-title.mediasense { color: var(--mediasense); }
+  .box-title.agent { color: var(--agent); }
+  .box-title.redis { color: var(--redis); }
+  .box-title.core { color: var(--mclaren-orange); }
+  .box-title.new { color: #A855F7; }
+
+  .box-items {
+    list-style: none;
+  }
+  .box-items li {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: #aaa;
+    padding: 2px 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .box-items li::before {
+    content: '›';
+    color: #555;
+    font-size: 12px;
+  }
+  .new-badge {
+    background: rgba(168,85,247,0.15);
+    border: 1px solid #A855F7;
+    color: #A855F7;
+    font-family: 'Orbitron', monospace;
+    font-size: 7px;
+    letter-spacing: 1px;
+    padding: 1px 5px;
+    border-radius: 3px;
+    margin-left: auto;
+  }
+
+  /* Flow arrows */
+  .flow-arrow {
+    text-align: center;
+    padding: 8px 0;
+    color: var(--mclaren-orange);
+    font-size: 18px;
+    opacity: 0.5;
+  }
+
+  /* Agent cards */
+  .agents-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-top: 8px;
+  }
+  .agent-card {
+    background: var(--mclaren-grey);
+    border: 1px solid #333;
+    border-radius: 8px;
+    padding: 20px;
+    position: relative;
+    transition: all 0.25s;
+  }
+  .agent-card:hover {
+    border-color: var(--agent);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(16,185,129,0.1);
+  }
+  .agent-card.new-agent {
+    border-color: rgba(168,85,247,0.3);
+  }
+  .agent-card.new-agent:hover {
+    border-color: #A855F7;
+    box-shadow: 0 8px 30px rgba(168,85,247,0.1);
+  }
+  .agent-number {
+    font-family: 'Orbitron', monospace;
+    font-size: 32px;
+    font-weight: 900;
+    color: #2a2a2a;
+    position: absolute;
+    top: 12px;
+    right: 16px;
+  }
+  .agent-type {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--dim);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .agent-name {
+    font-family: 'Orbitron', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--agent);
+    letter-spacing: 1px;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    line-height: 1.3;
+  }
+  .agent-name.new { color: #A855F7; }
+  .domain-label {
+    display: inline-block;
+    font-family: 'Orbitron', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 4px 12px;
+    border-radius: 4px;
+    margin-bottom: 10px;
+  }
+  .domain-label.car {
+    background: rgba(59,130,246,0.25);
+    color: #60A5FA;
+    border: 2px solid #3B82F6;
+    box-shadow: 0 0 12px rgba(59,130,246,0.3);
+  }
+  .domain-label.driver {
+    background: rgba(239,68,68,0.25);
+    color: #F87171;
+    border: 2px solid #EF4444;
+    box-shadow: 0 0 12px rgba(239,68,68,0.3);
+  }
+  .domain-label.both {
+    background: rgba(255,159,28,0.25);
+    color: #FFB84D;
+    border: 2px solid #FF9F1C;
+    box-shadow: 0 0 12px rgba(255,159,28,0.3);
+  }
+  .agent-desc {
+    font-size: 12px;
+    color: #888;
+    line-height: 1.5;
+    margin-bottom: 12px;
+  }
+  .agent-topics {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .topic-tag {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid #333;
+    padding: 3px 7px;
+    border-radius: 3px;
+    color: #666;
+    letter-spacing: 0.5px;
+  }
+  .topic-tag.pub { border-color: rgba(16,185,129,0.4); color: #10B981; }
+  .topic-tag.sub { border-color: rgba(59,130,246,0.4); color: #3B82F6; }
+
+  /* Event flow */
+  .event-flow {
+    background: var(--mclaren-grey);
+    border: 1px solid #333;
+    border-radius: 8px;
+    padding: 32px;
+    margin-top: 8px;
+    font-family: 'Share Tech Mono', monospace;
+  }
+  .flow-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 20px;
+    padding: 16px 0;
+    border-bottom: 1px solid #1f1f1f;
+  }
+  .flow-step:last-child { border-bottom: none; }
+  .step-num {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(255,128,0,0.1);
+    border: 1px solid var(--mclaren-orange);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Orbitron', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--mclaren-orange);
+    flex-shrink: 0;
+  }
+  .step-content { flex: 1; }
+  .step-title {
+    font-family: 'Orbitron', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+  }
+  .step-desc { font-size: 12px; color: #888; line-height: 1.6; }
+  .step-event {
+    display: inline-block;
+    background: rgba(255,107,53,0.1);
+    border: 1px solid rgba(255,107,53,0.3);
+    color: var(--redis);
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 3px;
+    margin: 4px 2px 0;
+    letter-spacing: 0.5px;
+  }
+  .step-agents {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 6px;
+  }
+  .step-agent-tag {
+    font-size: 10px;
+    background: rgba(16,185,129,0.08);
+    border: 1px solid rgba(16,185,129,0.25);
+    color: var(--agent);
+    padding: 2px 7px;
+    border-radius: 3px;
+  }
+
+  /* Data streams table */
+  .streams-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  .stream-card {
+    background: var(--mclaren-grey);
+    border: 1px solid #333;
+    border-radius: 8px;
+    padding: 20px;
+  }
+  .stream-title {
+    font-family: 'Orbitron', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #2a2a2a;
+  }
+  .stream-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 7px 0;
+    border-bottom: 1px solid #1a1a1a;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+  }
+  .stream-row:last-child { border-bottom: none; }
+  .stream-key { color: #888; }
+  .stream-val { color: var(--text); }
+  .stream-hz {
+    font-size: 9px;
+    background: rgba(255,128,0,0.1);
+    border: 1px solid rgba(255,128,0,0.2);
+    color: var(--mclaren-orange);
+    padding: 1px 6px;
+    border-radius: 3px;
+  }
+
+  /* Legend */
+  .legend {
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+    padding: 16px 0;
+    border-top: 1px solid #2a2a2a;
+    margin-top: 24px;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: var(--dim);
+    letter-spacing: 0.5px;
+  }
+  .legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+  }
+
+  /* Responsive */
+  @media (max-width: 900px) {
+    .content { padding: 24px 20px; }
+    .header { padding: 24px 20px 20px; }
+    .tabs { padding: 0 20px; }
+    .agents-grid { grid-template-columns: 1fr 1fr; }
+    .streams-grid { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 600px) {
+    .agents-grid { grid-template-columns: 1fr; }
+    .arch-row { grid-template-columns: 1fr !important; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-top">
+    <div class="logo-area">
+      <h1>OmniSense F1</h1>
+      <p>AGENTIC RACE INTELLIGENCE SYSTEM — CONNECTIVIA LABS</p>
+    </div>
+    <div class="live-badge">
+      <div class="live-dot"></div>
+      LIVE RACE MODE
+    </div>
+  </div>
+  <p class="subtitle">// DataSense (IoT/Telemetry) + MediaSense (Computer Vision) unified for Formula 1 live race analytics</p>
+</div>
+
+<!-- TABS -->
+<div class="tabs">
+  <div class="tab active" onclick="showTab('architecture')">01 · Architecture</div>
+  <div class="tab" onclick="showTab('agents')">02 · Agents</div>
+  <div class="tab" onclick="showTab('eventflow')">03 · Event Flow</div>
+  <div class="tab" onclick="showTab('datastreams')">04 · Data Streams</div>
+  <div class="tab" onclick="showTab('datalake')">05 · Data Lake</div>
+</div>
+
+<!-- CONTENT -->
+<div class="content">
+
+  <!-- ═══════════════════════════════════════════ ARCHITECTURE ═══ -->
+  <div id="architecture" class="section active">
+    <div class="section-title">System Architecture</div>
+    <div class="section-desc">
+      Your existing OmniSense architecture maps directly to F1 race data. DataSense consumes car telemetry (speed, throttle, brake, RPM, gear, DRS) and derived biometrics (G-force, engine stress). MediaSense consumes onboard camera feeds, pit lane vision, and tire wear cameras. Both feed the same Redis event bus — agents react in real time.
+    </div>
+
+    <!-- LAYER 1: DATA SOURCES -->
+    <div class="arch-layer-label">LAYER 1 — LIVE DATA SOURCES</div>
+    <div class="arch-row" style="grid-template-columns: 1fr 1fr 1fr 1fr;">
+      <div class="arch-box datasense">
+        <div class="box-title datasense">F1 Telemetry Stream</div>
+        <ul class="box-items">
+          <li>Speed / RPM / Gear</li>
+          <li>Throttle / Brake / DRS</li>
+          <li>X, Y Track Position</li>
+          <li>OpenF1 API @ 3.7Hz</li>
+        </ul>
+      </div>
+      <div class="arch-box new">
+        <div class="box-title new">Driver Biometrics <span class="new-badge">GENERATED</span></div>
+        <ul class="box-items">
+          <li>Heart Rate (bpm) — 132–195 range</li>
+          <li>Cockpit Temp (°C) — 30–65 range</li>
+          <li>Battle Intensity — interval-derived</li>
+          <li>Fatigue drift — lap-progressive</li>
+          <li>1.43M synthetic samples across 34 races</li>
+        </ul>
+      </div>
+      <div class="arch-box mediasense">
+        <div class="box-title mediasense">Camera Feeds</div>
+        <ul class="box-items">
+          <li>Onboard driver cam</li>
+          <li>Pit lane cameras</li>
+          <li>Tire wear cameras</li>
+          <li>Computer Vision @ MediaSense</li>
+        </ul>
+      </div>
+      <div class="arch-box datasense">
+        <div class="box-title datasense">Race Context</div>
+        <ul class="box-items">
+          <li>Lap times / Sector times</li>
+          <li>Gap to leader (4s update)</li>
+          <li>Tire compound + age</li>
+          <li>Weather / Track temp</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="flow-arrow">▼</div>
+
+    <!-- LAYER 2: INGESTION -->
+    <div class="arch-layer-label">LAYER 2 — INGESTION & NORMALIZATION</div>
+    <div class="arch-row" style="grid-template-columns: 1fr 1fr;">
+      <div class="arch-box datasense">
+        <div class="box-title datasense">DataSense Ingestor</div>
+        <ul class="box-items">
+          <li>OpenF1 API poller (3s interval)</li>
+          <li>FastF1 historical batch loader</li>
+          <li>G-force derivation pipeline</li>
+          <li>Unified sensor schema → MongoDB</li>
+        </ul>
+      </div>
+      <div class="arch-box mediasense">
+        <div class="box-title mediasense">MediaSense Ingestor</div>
+        <ul class="box-items">
+          <li>Live broadcast frame capture</li>
+          <li>Computer Vision object detection</li>
+          <li>Tire degradation visual classifier</li>
+          <li>Driver helmet / blink detection</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="flow-arrow">▼</div>
+
+    <!-- LAYER 3: EVENT BUS -->
+    <div class="arch-layer-label">LAYER 3 — REDIS EVENT BUS (existing port 6380)</div>
+    <div class="arch-row" style="grid-template-columns: 1fr;">
+      <div class="arch-box redis">
+        <div class="box-title redis">Redis Pub/Sub — F1 Topics</div>
+        <ul class="box-items" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 2px;">
+          <li>f1:telemetry:raw</li>
+          <li>f1:telemetry:anomaly</li>
+          <li>f1:gforce:spike</li>
+          <li>f1:lap:completed</li>
+          <li>f1:pit:window:open</li>
+          <li>f1:tire:degradation</li>
+          <li>f1:vision:incident</li>
+          <li>f1:strategy:recommend</li>
+          <li>f1:driver:fatigue:alert</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="flow-arrow">▼</div>
+
+    <!-- LAYER 4: AGENTS -->
+    <div class="arch-layer-label">LAYER 4 — AUTONOMOUS AGENT LAYER (your existing orchestrator)</div>
+    <div class="arch-row" style="grid-template-columns: repeat(4, 1fr);">
+      <div class="arch-box agent">
+        <div class="box-title agent">Detection Agents</div>
+        <ul class="box-items">
+          <li>TelemetryAnomalyAgent</li>
+          <li>GForceSpike Watcher</li>
+          <li>EngineStress Agent</li>
+          <li>VisionIncident Agent</li>
+        </ul>
+      </div>
+      <div class="arch-box agent">
+        <div class="box-title agent">Strategy Agents</div>
+        <ul class="box-items">
+          <li>PitWindow Agent</li>
+          <li>TireDeg Agent</li>
+          <li>UndercutPredictor</li>
+          <li>WeatherAdapt Agent</li>
+        </ul>
+      </div>
+      <div class="arch-box agent">
+        <div class="box-title agent">Knowledge Agents</div>
+        <ul class="box-items">
+          <li>LapPattern Agent</li>
+          <li>DriverFatigue Agent</li>
+          <li>KnowledgeConvergence</li>
+          <li>ModelTrainer Agent</li>
+        </ul>
+      </div>
+      <div class="arch-box agent">
+        <div class="box-title agent">Orchestrator</div>
+        <ul class="box-items">
+          <li>Intent routing</li>
+          <li>Agent coordination</li>
+          <li>Priority queue</li>
+          <li>Circuit breaker</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="flow-arrow">▼</div>
+
+    <!-- LAYER 5: OUTPUTS -->
+    <div class="arch-layer-label">LAYER 5 — OUTPUTS & STORAGE</div>
+    <div class="arch-row" style="grid-template-columns: 1fr 1fr 1fr 1fr;">
+      <div class="arch-box core">
+        <div class="box-title core">Live Dashboard</div>
+        <ul class="box-items">
+          <li>Real-time telemetry viz</li>
+          <li>Agent event stream</li>
+          <li>Strategy recommendations</li>
+        </ul>
+      </div>
+      <div class="arch-box core">
+        <div class="box-title core">MongoDB</div>
+        <ul class="box-items">
+          <li>All telemetry records</li>
+          <li>Agent decisions log</li>
+          <li>Race-by-race history</li>
+        </ul>
+      </div>
+      <div class="arch-box core">
+        <div class="box-title core">Qdrant</div>
+        <ul class="box-items">
+          <li>Lap embeddings</li>
+          <li>Incident similarity</li>
+          <li>Strategy knowledge base</li>
+        </ul>
+      </div>
+      <div class="arch-box core">
+        <div class="box-title core">LLM Insights</div>
+        <ul class="box-items">
+          <li>Gemma3 local analysis</li>
+          <li>Multi-Modal vision events</li>
+          <li>Natural language alerts</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:var(--datasense)"></div>DataSense / IoT</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--mediasense)"></div>MediaSense / Vision</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--agent)"></div>Agent Layer</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--redis)"></div>Redis Event Bus</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--mclaren-orange)"></div>Core Infrastructure</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#A855F7"></div>New F1-Specific</div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════ AGENTS ═══ -->
+  <div id="agents" class="section">
+    <div class="section-title">Agent Roadmap</div>
+    <div class="section-desc">
+      10 F1-specific agents organized into two build phases. Initial agents (01-05) form the core telemetry pipeline and can run on existing data immediately. Future agents (06-10) add derived analytics, biometric tracking, and advanced infrastructure (Qdrant embeddings, Multi-Modal vision, Computer Vision pipeline).
+    </div>
+
+    <div class="legend" style="margin-top:8px; border-top:none;">
+      <div class="legend-item"><div class="legend-dot" style="background:var(--agent)"></div>Initial — 5 agents, build now</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#A855F7"></div>Future — 5 agents, advanced infra</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#3B82F6"></div>Car — vehicle telemetry &amp; strategy</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#EF4444"></div>Driver — biometric &amp; behavior</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#FF9F1C"></div>Car + Driver — fused domains</div>
+    </div>
+
+    <!-- ——— INITIAL: BUILD IMMEDIATELY ——— -->
+    <div class="arch-layer-label" style="border-top:none; margin-top:0;">
+      <span style="color:var(--agent);">INITIAL</span> — BUILD IMMEDIATELY
+    </div>
+    <div style="font-family:'Share Tech Mono',monospace; font-size:11px; color:#666; margin-bottom:16px;">
+      Core pipeline. Works with existing data in f1data/. No external dependencies beyond Redis + MongoDB.
+    </div>
+
+    <div class="agents-grid">
+
+      <div class="agent-card">
+        <div class="agent-number">01</div>
+        <div class="agent-type">DETECTION · DATASENSE</div>
+        <div class="domain-label car">CAR</div>
+        <div class="agent-name">TelemetryAnomaly Agent</div>
+        <div class="agent-desc">Mirrors your existing AnomalyDetectionAgent. Ingests raw F1 telemetry at 3.7Hz, runs ensemble anomaly detection on Speed, RPM, Throttle, Brake. Flags unusual car behavior mid-race — e.g. sudden RPM drop (engine issue) or brake pressure spike (brake failure).</div>
+        <div class="agent-topics">
+          <span class="topic-tag sub">SUB: f1:telemetry:raw</span>
+          <span class="topic-tag pub">PUB: f1:telemetry:anomaly</span>
+        </div>
+      </div>
+
+      <div class="agent-card">
+        <div class="agent-number">02</div>
+        <div class="agent-type">STRATEGY · NEW</div>
+        <div class="domain-label car">CAR</div>
+        <div class="agent-name">Weather Adapt Agent</div>
+        <div class="agent-desc">Subscribes to OpenF1 weather endpoint (track temp, humidity, rainfall). When rain probability spikes or track temp drops 5°C+, publishes strategy alerts. Triggers PitWindowAgent recalculation on wet/intermediate tire compound change scenarios. Data ready in McRaceContext/weather.csv.</div>
+        <div class="agent-topics">
+          <span class="topic-tag sub">SUB: f1:weather:update</span>
+          <span class="topic-tag pub">PUB: f1:strategy:recommend</span>
+          <span class="topic-tag pub">PUB: f1:pit:window:open</span>
+        </div>
+      </div>
+
+      <div class="agent-card">
+        <div class="agent-number">03</div>
+        <div class="agent-type">STRATEGY · NEW</div>
+        <div class="domain-label car">CAR</div>
+        <div class="agent-name">Pit Window Agent</div>
+        <div class="agent-desc">Monitors tire age, lap delta, and gap to cars behind. Calculates optimal pit stop window using undercut/overcut logic. Triggers strategy recommendation when pit window opens. Aware of safety car periods — adjusts window calculation in real time. Uses McRaceContext/ + McStrategy/ data.</div>
+        <div class="agent-topics">
+          <span class="topic-tag sub">SUB: f1:lap:completed</span>
+          <span class="topic-tag sub">SUB: f1:tire:degradation</span>
+          <span class="topic-tag pub">PUB: f1:pit:window:open</span>
+          <span class="topic-tag pub">PUB: f1:strategy:recommend</span>
+        </div>
+      </div>
+
+      <div class="agent-card">
+        <div class="agent-number">04</div>
+        <div class="agent-type">KNOWLEDGE · EXISTING</div>
+        <div class="domain-label both">CAR + DRIVER</div>
+        <div class="agent-name">Knowledge Convergence Agent</div>
+        <div class="agent-desc">Your existing KnowledgeConvergenceAgent — unchanged. Fuses outputs from all agents into unified race knowledge base. In F1 context: merges tire data + lap delta + anomaly alerts + weather into a single car health snapshot per lap. The backbone all other agents publish into.</div>
+        <div class="agent-topics">
+          <span class="topic-tag sub">SUB: knowledge:update</span>
+          <span class="topic-tag pub">PUB: knowledge:fused</span>
+        </div>
+      </div>
+
+      <div class="agent-card">
+        <div class="agent-number">05</div>
+        <div class="agent-type">VISION · EXISTING</div>
+        <div class="domain-label both">CAR + DRIVER</div>
+        <div class="agent-name">Visual Inspection Agent</div>
+        <div class="agent-desc">Your existing VisualInspectionAgent — extended for F1 with multi-modal analysis. Triggered by anomaly events to analyze onboard frames. Uses McMedia/ footage as reference. Can run immediately on existing video data and scale to live feeds later.</div>
+        <div class="agent-topics">
+          <span class="topic-tag sub">SUB: f1:gforce:spike</span>
+          <span class="topic-tag sub">SUB: f1:vision:request</span>
+          <span class="topic-tag pub">PUB: f1:vision:incident</span>
+          <span class="topic-tag pub">PUB: knowledge:update</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ——— FUTURE: ADVANCED ROADMAP ——— -->
+    <div class="arch-layer-label">
+      <span style="color:#A855F7;">FUTURE</span> — ADVANCED ROADMAP
+    </div>
+    <div style="font-family:'Share Tech Mono',monospace; font-size:11px; color:#666; margin-bottom:16px;">
+      Derived analytics, biometric intelligence, and advanced infrastructure. Requires Qdrant vector DB, Multi-Modal vision API, Computer Vision trained on F1 footage. Build once Initial agents are validated.
+    </div>
+
+    <div class="agents-grid">
+
+      <div class="agent-card new-agent">
+        <div class="agent-number">06</div>
+        <div class="agent-type">DETECTION · DERIVED</div>
+        <div class="domain-label car">CAR</div>
+        <div class="agent-name new">GForce Spike Watcher</div>
+        <div class="agent-desc">Derives lateral and longitudinal G-forces from telemetry. Watches for extreme G spikes that indicate incidents, unusual braking zones, or exceeding car limits. Feeds VisualInspectionAgent when spike occurs — triggers frame capture at that moment.</div>
+        <div class="agent-topics">
+          <span class="topic-tag sub">SUB: f1:telemetry:raw</span>
+          <span class="topic-tag pub">PUB: f1:gforce:spike</span>
+          <span class="topic-tag pub">PUB: f1:vision:request</span>
+        </div>
+      </div>
+
+      <div class="agent-card new-agent">
+        <div class="agent-number">07</div>
+        <div class="agent-type">STRATEGY · DERIVED</div>
+        <div class="domain-label car">CAR</div>
+        <div class="agent-name new">Undercut Predictor</div>
+        <div class="agent-desc">Calculates undercut viability in real time. When PitWindowAgent fires, queries gap to car ahead, models pit stop loss (~20s), projects pace delta on fresh tire. Outputs confidence-scored recommendation. Uses McRaceContext/ gap + stint data.</div>
+        <div class="agent-topics">
+          <span class="topic-tag sub">SUB: f1:pit:window:open</span>
+          <span class="topic-tag sub">SUB: f1:lap:completed</span>
+          <span class="topic-tag pub">PUB: f1:strategy:recommend</span>
+        </div>
+      </div>
+
+      <div class="agent-card new-agent">
+        <div class="agent-number">08</div>
+        <div class="agent-type">DETECTION · BIOMETRIC</div>
+        <div class="domain-label driver">DRIVER</div>
+        <div class="agent-name new">Driver Fatigue Agent</div>
+        <div class="agent-desc">Tracks lap-over-lap consistency of braking points, throttle application, and cornering speed. Statistical deviation from driver's own baseline indicates fatigue or concentration loss. Uses Driver/ biometric + McCar/ telemetry correlation across 1.43M samples.</div>
+        <div class="agent-topics">
+          <span class="topic-tag sub">SUB: f1:lap:completed</span>
+          <span class="topic-tag pub">PUB: f1:driver:fatigue:alert</span>
+          <span class="topic-tag pub">PUB: f1:strategy:recommend</span>
+        </div>
+      </div>
+
+      <div class="agent-card new-agent">
+        <div class="agent-number">09</div>
+        <div class="agent-type">MEDIASENSE · VISION</div>
+        <div class="domain-label car">CAR</div>
+        <div class="agent-name new">Tire Degradation Agent</div>
+        <div class="agent-desc">Uses MediaSense Computer Vision on pit lane cameras to visually classify tire wear grade (new / used / worn / critical) when cars pass. Cross-references with lap count and compound from DataSense. Requires trained Computer Vision model on F1 tire imagery from McMedia/ footage.</div>
+        <div class="agent-topics">
+          <span class="topic-tag sub">SUB: mediasense:detection</span>
+          <span class="topic-tag sub">SUB: f1:telemetry:raw</span>
+          <span class="topic-tag pub">PUB: f1:tire:degradation</span>
+        </div>
+      </div>
+
+      <div class="agent-card new-agent">
+        <div class="agent-number">10</div>
+        <div class="agent-type">KNOWLEDGE · QDRANT</div>
+        <div class="domain-label driver">DRIVER</div>
+        <div class="agent-name new">LapPattern Agent</div>
+        <div class="agent-desc">After each lap, embeds the full telemetry profile (Speed + Throttle + Brake curve) into Qdrant. Similarity searches across 34 historical races (1.43M samples) to find comparable laps. Surfaces insight: "This lap matches NOR's 2023 Silverstone hot stint — he pushed 4 more laps before pitting."</div>
+        <div class="agent-topics">
+          <span class="topic-tag sub">SUB: f1:lap:completed</span>
+          <span class="topic-tag pub">PUB: knowledge:update</span>
+          <span class="topic-tag pub">PUB: f1:strategy:recommend</span>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- ═══════════════════════════════════════════ EVENT FLOW ═══ -->
+  <div id="eventflow" class="section">
+    <div class="section-title">Race Event Flow</div>
+    <div class="section-desc">
+      End-to-end event chain for two critical race scenarios — engine anomaly detection and pit strategy decision. Both flow through your existing Redis pub/sub architecture and orchestrator. No new infrastructure needed.
+    </div>
+
+    <div style="font-family:'Orbitron',monospace; font-size:11px; color:var(--mclaren-orange); letter-spacing:1px; margin-bottom:12px; text-transform:uppercase;">
+      Scenario A — Engine Anomaly Detected Mid-Race
+    </div>
+
+    <div class="event-flow">
+      <div class="flow-step">
+        <div class="step-num">1</div>
+        <div class="step-content">
+          <div class="step-title">Raw Telemetry Arrives</div>
+          <div class="step-desc">OpenF1 API polling detects RPM drops from 11,800 to 10,200 over 3 consecutive samples. Speed also drops 8 km/h on the straight. DataSense ingestor normalizes and publishes to Redis.</div>
+          <div><span class="step-event">f1:telemetry:raw</span></div>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="step-num">2</div>
+        <div class="step-content">
+          <div class="step-title">TelemetryAnomaly Agent Fires</div>
+          <div class="step-desc">Ensemble anomaly model scores the RPM pattern as anomaly_score: 0.91 (Critical). Publishes anomaly event with severity, driver, lap number, sensor readings.</div>
+          <div>
+            <span class="step-event">f1:telemetry:anomaly (severity: CRITICAL)</span>
+          </div>
+          <div class="step-agents"><span class="step-agent-tag">TelemetryAnomalyAgent</span></div>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="step-num">3</div>
+        <div class="step-content">
+          <div class="step-title">Parallel Agent Reactions</div>
+          <div class="step-desc">Three agents react simultaneously to the anomaly event — this is the power of pub/sub. No orchestrator needed to coordinate them, they self-organize around the event.</div>
+          <div class="step-agents">
+            <span class="step-agent-tag">VisualInspectionAgent → captures onboard frame → Multi-Modal analysis</span>
+          </div>
+          <div class="step-agents">
+            <span class="step-agent-tag">AnomalyActionAgent → selects "engine_issue" playbook</span>
+          </div>
+          <div class="step-agents">
+            <span class="step-agent-tag">PitWindowAgent → recalculates window urgency</span>
+          </div>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="step-num">4</div>
+        <div class="step-content">
+          <div class="step-title">Knowledge Convergence</div>
+          <div class="step-desc">KnowledgeConvergenceAgent fuses: anomaly reading + Multi-Modal vision analysis ("driver appears to be managing throttle carefully, possible engine preservation") + historical similar events from Qdrant. Updates race knowledge base.</div>
+          <div><span class="step-event">knowledge:fused</span></div>
+          <div class="step-agents"><span class="step-agent-tag">KnowledgeConvergenceAgent</span></div>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="step-num">5</div>
+        <div class="step-content">
+          <div class="step-title">LLM Natural Language Alert</div>
+          <div class="step-desc">Gemma3 generates race engineer-style natural language summary: "NOR showing engine stress on lap 32, RPM 8% below baseline. Visual confirms throttle management. Recommend priority pit window lap 33-34 before potential failure."</div>
+          <div><span class="step-event">dashboard:alert</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div style="font-family:'Orbitron',monospace; font-size:11px; color:var(--mclaren-orange); letter-spacing:1px; margin: 28px 0 12px; text-transform:uppercase;">
+      Scenario B — Pit Strategy Decision Chain
+    </div>
+
+    <div class="event-flow">
+      <div class="flow-step">
+        <div class="step-num">1</div>
+        <div class="step-content">
+          <div class="step-title">Lap Completed Event</div>
+          <div class="step-desc">NOR completes lap 28. LapTime, sector splits, tire age (18 laps on mediums), gap to leader (+4.2s), gap to car behind (-1.8s) all published.</div>
+          <div><span class="step-event">f1:lap:completed</span></div>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="step-num">2</div>
+        <div class="step-content">
+          <div class="step-title">Tire Degradation Agent Activates</div>
+          <div class="step-desc">Lap delta analysis shows +0.3s degradation vs lap 25. Computer Vision pit lane camera grades tires as "worn" visually. Combined signal: TireDeg score 0.78. Publishes degradation event.</div>
+          <div><span class="step-event">f1:tire:degradation (score: 0.78, grade: WORN)</span></div>
+          <div class="step-agents"><span class="step-agent-tag">TireDegradationAgent</span><span class="step-agent-tag">VisualInspectionAgent</span></div>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="step-num">3</div>
+        <div class="step-content">
+          <div class="step-title">Driver Fatigue Agent Cross-checks</div>
+          <div class="step-desc">DriverFatigueAgent detects braking point variation increased 4m over last 5 laps (baseline: 1.2m). Publishes mild fatigue alert — adds context that driver may be compensating for tire degradation vs actual fatigue.</div>
+          <div><span class="step-event">f1:driver:fatigue:alert (level: MILD)</span></div>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="step-num">4</div>
+        <div class="step-content">
+          <div class="step-title">Pit Window Opens + Undercut Analysis</div>
+          <div class="step-desc">PitWindowAgent calculates: car behind is 1.8s — within undercut threat range. UndercutPredictor models scenario: pit now (lap 29), 22s stop, rejoin 3.5s behind on fresh hard. Projects +0.6s/lap pace advantage. Net positive after 6 laps.</div>
+          <div>
+            <span class="step-event">f1:pit:window:open</span>
+            <span class="step-event">f1:strategy:recommend (undercut: 0.84 confidence)</span>
+          </div>
+          <div class="step-agents"><span class="step-agent-tag">PitWindowAgent</span><span class="step-agent-tag">UndercutPredictor</span></div>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="step-num">5</div>
+        <div class="step-content">
+          <div class="step-title">LapPattern Agent Historical Context</div>
+          <div class="step-desc">Searches Qdrant: finds 3 similar lap profiles from NOR's 2023 season. In all 3, pitting at lap 29-31 on mediums resulted in strong race outcomes. Adds confidence to recommendation.</div>
+          <div><span class="step-event">knowledge:update (historical_match: 3 laps, similarity: 0.89)</span></div>
+          <div class="step-agents"><span class="step-agent-tag">LapPatternAgent</span></div>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="step-num">6</div>
+        <div class="step-content">
+          <div class="step-title">Final Unified Recommendation</div>
+          <div class="step-desc">KnowledgeConvergenceAgent fuses all signals into one race engineer brief rendered on dashboard: "Recommend PIT NOW — Lap 29. Tire degraded (0.78), undercut viable (0.84), historical match confirms. Car behind threat in 2 laps at current pace delta."</div>
+          <div><span class="step-event">knowledge:fused → dashboard:strategy</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════ DATA STREAMS ═══ -->
+  <div id="datastreams" class="section">
+    <div class="section-title">Data Streams</div>
+    <div class="section-desc">
+      Complete mapping of all live data channels into DataSense and MediaSense. Each stream maps to existing sensor schema patterns — your ingestor just needs a new connector for the OpenF1 API.
+    </div>
+
+    <div class="streams-grid">
+
+      <div class="stream-card">
+        <div class="stream-title" style="color:var(--datasense)">DataSense — Car Telemetry</div>
+        <div class="stream-row"><span class="stream-key">Speed</span><span class="stream-val">km/h, 0–350 <span class="stream-hz">3.7Hz</span></span></div>
+        <div class="stream-row"><span class="stream-key">RPM</span><span class="stream-val">0–12,000 <span class="stream-hz">3.7Hz</span></span></div>
+        <div class="stream-row"><span class="stream-key">Gear</span><span class="stream-val">1–8 <span class="stream-hz">3.7Hz</span></span></div>
+        <div class="stream-row"><span class="stream-key">Throttle</span><span class="stream-val">0–100% <span class="stream-hz">3.7Hz</span></span></div>
+        <div class="stream-row"><span class="stream-key">Brake</span><span class="stream-val">boolean/pressure <span class="stream-hz">3.7Hz</span></span></div>
+        <div class="stream-row"><span class="stream-key">DRS</span><span class="stream-val">open/closed <span class="stream-hz">3.7Hz</span></span></div>
+        <div class="stream-row"><span class="stream-key">X/Y Position</span><span class="stream-val">track coordinates <span class="stream-hz">3.7Hz</span></span></div>
+        <div class="stream-row"><span class="stream-key">Lap Time</span><span class="stream-val">ms precision <span class="stream-hz">per lap</span></span></div>
+        <div class="stream-row"><span class="stream-key">Sector Times</span><span class="stream-val">S1, S2, S3 <span class="stream-hz">per lap</span></span></div>
+        <div class="stream-row"><span class="stream-key">Gap to Leader</span><span class="stream-val">seconds <span class="stream-hz">4s</span></span></div>
+        <div class="stream-row"><span class="stream-key">Tire Compound</span><span class="stream-val">soft/med/hard <span class="stream-hz">per stint</span></span></div>
+        <div class="stream-row"><span class="stream-key">Tire Age</span><span class="stream-val">laps on set <span class="stream-hz">per lap</span></span></div>
+      </div>
+
+      <div class="stream-card">
+        <div class="stream-title" style="color:#A855F7">DataSense — Driver Biometrics (Synthetic)</div>
+        <div class="stream-row"><span class="stream-key">HeartRate_bpm</span><span class="stream-val">132–195 bpm, mean ~168 <span class="stream-hz">3.7Hz</span></span></div>
+        <div class="stream-row"><span class="stream-key">CockpitTemp_C</span><span class="stream-val">30–65°C, mean ~43 <span class="stream-hz">3.7Hz</span></span></div>
+        <div class="stream-row"><span class="stream-key">BattleIntensity</span><span class="stream-val">0–1 from interval gaps <span class="stream-hz">per race</span></span></div>
+        <div class="stream-row"><span class="stream-key">AirTemp_C</span><span class="stream-val">weather-correlated <span class="stream-hz">per race</span></span></div>
+        <div class="stream-row"><span class="stream-key">TrackTemp_C</span><span class="stream-val">weather-correlated <span class="stream-hz">per race</span></span></div>
+        <div class="stream-row"><span class="stream-key">Humidity_pct</span><span class="stream-val">weather-correlated <span class="stream-hz">per race</span></span></div>
+        <div class="stream-row"><span class="stream-key">HR Correlators</span><span class="stream-val">speed, brake, throttle, RPM, DRS <span class="stream-hz">derived</span></span></div>
+        <div class="stream-row"><span class="stream-key">Temp Correlators</span><span class="stream-val">air temp, track temp, airflow <span class="stream-hz">derived</span></span></div>
+        <div class="stream-row"><span class="stream-key">Race Start Spike</span><span class="stream-val">+12 bpm laps 1-2 <span class="stream-hz">event</span></span></div>
+        <div class="stream-row"><span class="stream-key">Fatigue Drift</span><span class="stream-val">+6 bpm over race duration <span class="stream-hz">progressive</span></span></div>
+      </div>
+
+      <div class="stream-card">
+        <div class="stream-title" style="color:var(--mediasense)">MediaSense — Camera Feeds</div>
+        <div class="stream-row"><span class="stream-key">Onboard Camera</span><span class="stream-val">driver perspective <span class="stream-hz">25fps</span></span></div>
+        <div class="stream-row"><span class="stream-key">Pit Lane Feed</span><span class="stream-val">tire change visual <span class="stream-hz">25fps</span></span></div>
+        <div class="stream-row"><span class="stream-key">Rear Wing Cam</span><span class="stream-val">DRS visual confirm <span class="stream-hz">25fps</span></span></div>
+        <div class="stream-row"><span class="stream-key">Tire Wear Grade</span><span class="stream-val">Computer Vision classification <span class="stream-hz">per frame</span></span></div>
+        <div class="stream-row"><span class="stream-key">Incident Detection</span><span class="stream-val">Computer Vision object detect <span class="stream-hz">triggered</span></span></div>
+        <div class="stream-row"><span class="stream-key">Multi-Modal Analysis</span><span class="stream-val">frame description <span class="stream-hz">triggered</span></span></div>
+        <div class="stream-row"><span class="stream-key">Driver Helmet Track</span><span class="stream-val">head movement analysis <span class="stream-hz">triggered</span></span></div>
+      </div>
+
+      <div class="stream-card">
+        <div class="stream-title" style="color:var(--mclaren-orange)">Race Context / Weather</div>
+        <div class="stream-row"><span class="stream-key">Track Temp</span><span class="stream-val">°C surface <span class="stream-hz">60s</span></span></div>
+        <div class="stream-row"><span class="stream-key">Air Temp</span><span class="stream-val">°C ambient <span class="stream-hz">60s</span></span></div>
+        <div class="stream-row"><span class="stream-key">Humidity</span><span class="stream-val">% <span class="stream-hz">60s</span></span></div>
+        <div class="stream-row"><span class="stream-key">Wind Speed</span><span class="stream-val">km/h + direction <span class="stream-hz">60s</span></span></div>
+        <div class="stream-row"><span class="stream-key">Rainfall</span><span class="stream-val">boolean + intensity <span class="stream-hz">60s</span></span></div>
+        <div class="stream-row"><span class="stream-key">Safety Car Status</span><span class="stream-val">race control message <span class="stream-hz">event</span></span></div>
+        <div class="stream-row"><span class="stream-key">Flags</span><span class="stream-val">yellow/red/green <span class="stream-hz">event</span></span></div>
+        <div class="stream-row"><span class="stream-key">Race Lap Count</span><span class="stream-val">current / total <span class="stream-hz">per lap</span></span></div>
+        <div class="stream-row"><span class="stream-key">Pit Stop Duration</span><span class="stream-val">ms precision <span class="stream-hz">per stop</span></span></div>
+        <div class="stream-row"><span class="stream-key">Constructor Points</span><span class="stream-val">live standings <span class="stream-hz">per lap</span></span></div>
+      </div>
+
+    </div>
+
+    <div style="margin-top:24px; padding:20px; background:var(--mclaren-grey); border:1px solid #333; border-left:3px solid var(--mclaren-orange); border-radius:6px;">
+      <div style="font-family:'Orbitron',monospace; font-size:10px; color:var(--mclaren-orange); letter-spacing:1.5px; margin-bottom:8px; text-transform:uppercase;">Key Integration Note</div>
+      <div style="font-family:'Share Tech Mono',monospace; font-size:12px; color:#999; line-height:1.7;">
+        All DataSense streams plug directly into your existing sensor schema (date, epEui equivalent → driver_number, battery_voltage equivalent → engine_stress_index). Your anomaly detection ensemble models require zero changes — they just receive F1 sensor readings instead of IoT sensor readings. The Redis event bus, MongoDB storage, Qdrant embeddings, and Gemma3 LLM layer are all reused exactly as-is.
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════ DATA LAKE ═══ -->
+  <div id="datalake" class="section">
+    <div class="section-title">f1data — Data Lake</div>
+    <div class="section-desc">
+      Structured data lake at /f1/f1data/ — all datasets split by season (2023, 2024). Each Mc-prefixed folder maps to an OmniSense subsystem. 1.43M telemetry rows, 168K interval records, 40K weather readings, and synthetic driver biometrics all cross-referenced.
+    </div>
+
+    <!-- Data Lake Structure -->
+    <div class="arch-layer-label">FOLDER STRUCTURE</div>
+    <div class="arch-row" style="grid-template-columns: repeat(3, 1fr);">
+      <div class="arch-box core">
+        <div class="box-title core">McCar/</div>
+        <ul class="box-items">
+          <li>Car telemetry — Speed, RPM, Throttle, Brake, DRS, Gear</li>
+          <li>2023/ — 16 race files (682K rows)</li>
+          <li>2024/ — 18 race files (750K rows)</li>
+          <li>ALL_COMBINED.csv (1.43M rows)</li>
+          <li>Compound + TyreLife per sample</li>
+          <li>LapNumber, LapTime, Distance</li>
+        </ul>
+      </div>
+      <div class="arch-box new">
+        <div class="box-title new">Driver/ <span class="new-badge">GENERATED</span></div>
+        <ul class="box-items">
+          <li>Synthetic biometrics — HeartRate_bpm, CockpitTemp_C</li>
+          <li>2023/ — 16 race files + combined (682K rows)</li>
+          <li>2024/ — 18 race files + combined (750K rows)</li>
+          <li>ALL_BIOMETRICS_COMBINED.csv (1.43M rows)</li>
+          <li>Correlated with telemetry + weather + flags</li>
+          <li>BattleIntensity from interval data</li>
+        </ul>
+      </div>
+      <div class="arch-box datasense">
+        <div class="box-title datasense">McRaceContext/</div>
+        <ul class="box-items">
+          <li>laps_sectors.csv — lap times, S1/S2/S3, speed traps</li>
+          <li>gap_to_leader.csv — interval + gap (~4s updates)</li>
+          <li>tire_stints.csv — compound, stint length, age</li>
+          <li>weather.csv — air/track temp, humidity, wind, rain</li>
+          <li>2023/ — 78K total rows</li>
+          <li>2024/ — 79K total rows</li>
+        </ul>
+      </div>
+    </div>
+
+    <div style="height:12px;"></div>
+
+    <div class="arch-row" style="grid-template-columns: repeat(3, 1fr);">
+      <div class="arch-box agent">
+        <div class="box-title agent">McStrategy/</div>
+        <ul class="box-items">
+          <li>pit_stops.csv — pit stop times + lap numbers</li>
+          <li>team_radio.csv — driver-engineer radio messages</li>
+          <li>race_control.csv — flags, SC, VSC, red flags</li>
+          <li>2023/ — 6.6K total rows</li>
+          <li>2024/ — 7.4K total rows</li>
+        </ul>
+      </div>
+      <div class="arch-box datasense">
+        <div class="box-title datasense">McResults/</div>
+        <ul class="box-items">
+          <li>positions.csv — live position tracking</li>
+          <li>overtakes.csv — overtake events</li>
+          <li>session_results.csv — final results</li>
+          <li>starting_grid.csv — grid positions</li>
+          <li>championship_drivers.csv — driver points</li>
+          <li>championship_teams.csv — constructor points</li>
+          <li>2023/ — 10.7K rows | 2024/ — 10.6K rows</li>
+        </ul>
+      </div>
+      <div class="arch-box mediasense">
+        <div class="box-title mediasense">McMedia/</div>
+        <ul class="box-items">
+          <li>DASH_720.mp4 — dashboard camera (22 MB)</li>
+          <li>F1 Driver Eye POV — onboard footage (229 MB)</li>
+          <li>MediaSense Computer Vision source feeds</li>
+          <li>Pit lane + tire wear visual reference</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Cross-reference map -->
+    <div style="height:20px;"></div>
+    <div class="arch-layer-label">DATA CROSS-REFERENCE MAP</div>
+    <div class="event-flow">
+      <div class="flow-step">
+        <div class="step-num" style="background:rgba(255,128,0,0.2);">↔</div>
+        <div class="step-content">
+          <div class="step-title">McCar ↔ Driver (1:1 row match)</div>
+          <div class="step-desc">Every telemetry sample in McCar has a corresponding biometric row in Driver. Heart rate correlates with Speed, Brake, Throttle, RPM. Cockpit temp correlates with weather + airflow. Join on Date + Driver + LapNumber.</div>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="step-num" style="background:rgba(59,130,246,0.2); border-color:var(--datasense); color:var(--datasense);">↔</div>
+        <div class="step-content">
+          <div class="step-title">McCar ↔ McRaceContext (per-lap enrichment)</div>
+          <div class="step-desc">Telemetry enriched with sector splits, gap to leader, tire stint info, and weather conditions. Join on Year + Race + Driver + LapNumber. Weather provides ambient context for cockpit temp model.</div>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="step-num" style="background:rgba(16,185,129,0.2); border-color:var(--agent); color:var(--agent);">↔</div>
+        <div class="step-content">
+          <div class="step-title">McStrategy ↔ Driver (event correlation)</div>
+          <div class="step-desc">Race control flags trigger HR spikes in biometric data (within 30s window). Pit stops correlate with cockpit temp changes (stationary heating). Team radio messages align with battle intensity periods.</div>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="step-num" style="background:rgba(239,68,68,0.2); border-color:var(--mediasense); color:var(--mediasense);">↔</div>
+        <div class="step-content">
+          <div class="step-title">McResults ↔ McStrategy (outcome validation)</div>
+          <div class="step-desc">Position changes validate pit strategy decisions. Overtake events correlate with DRS zones and battle intensity. Championship points track cumulative strategic performance across the season.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats summary -->
+    <div style="margin-top:24px; padding:20px; background:var(--mclaren-grey); border:1px solid #333; border-left:3px solid var(--mclaren-orange); border-radius:6px;">
+      <div style="font-family:'Orbitron',monospace; font-size:10px; color:var(--mclaren-orange); letter-spacing:1.5px; margin-bottom:12px; text-transform:uppercase;">Data Lake Totals</div>
+      <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:16px;">
+        <div>
+          <div style="font-family:'Orbitron',monospace; font-size:22px; font-weight:900; color:var(--mclaren-orange);">1.43M</div>
+          <div style="font-family:'Share Tech Mono',monospace; font-size:10px; color:#666; letter-spacing:0.5px;">Telemetry Samples</div>
+        </div>
+        <div>
+          <div style="font-family:'Orbitron',monospace; font-size:22px; font-weight:900; color:var(--mclaren-orange);">1.43M</div>
+          <div style="font-family:'Share Tech Mono',monospace; font-size:10px; color:#666; letter-spacing:0.5px;">Biometric Samples</div>
+        </div>
+        <div>
+          <div style="font-family:'Orbitron',monospace; font-size:22px; font-weight:900; color:var(--mclaren-orange);">34</div>
+          <div style="font-family:'Share Tech Mono',monospace; font-size:10px; color:#666; letter-spacing:0.5px;">Races (2023–2024)</div>
+        </div>
+        <div>
+          <div style="font-family:'Orbitron',monospace; font-size:22px; font-weight:900; color:var(--mclaren-orange);">6</div>
+          <div style="font-family:'Share Tech Mono',monospace; font-size:10px; color:#666; letter-spacing:0.5px;">Data Domains</div>
+        </div>
+      </div>
+      <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:16px; margin-top:16px; padding-top:16px; border-top:1px solid #2a2a2a;">
+        <div>
+          <div style="font-family:'Orbitron',monospace; font-size:22px; font-weight:900; color:#A855F7;">168K</div>
+          <div style="font-family:'Share Tech Mono',monospace; font-size:10px; color:#666; letter-spacing:0.5px;">Interval Records</div>
+        </div>
+        <div>
+          <div style="font-family:'Orbitron',monospace; font-size:22px; font-weight:900; color:#A855F7;">40K</div>
+          <div style="font-family:'Share Tech Mono',monospace; font-size:10px; color:#666; letter-spacing:0.5px;">Weather Readings</div>
+        </div>
+        <div>
+          <div style="font-family:'Orbitron',monospace; font-size:22px; font-weight:900; color:#A855F7;">2.2K</div>
+          <div style="font-family:'Share Tech Mono',monospace; font-size:10px; color:#666; letter-spacing:0.5px;">Team Radio Messages</div>
+        </div>
+        <div>
+          <div style="font-family:'Orbitron',monospace; font-size:22px; font-weight:900; color:#A855F7;">251MB</div>
+          <div style="font-family:'Share Tech Mono',monospace; font-size:10px; color:#666; letter-spacing:0.5px;">Video Footage</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+  function showTab(id) {
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    event.target.classList.add('active');
+  }
+</script>
+</body>
+</html>

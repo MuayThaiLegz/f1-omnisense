@@ -1,0 +1,49 @@
+# ─── Python ───────────────────────────────────────────
+fienv/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.eggs/
+
+# ─── Node ─────────────────────────────────────────────
+node_modules/
+frontend/dist/
+frontend/.vercel/
+
+# ─── Data (too large for git) ─────────────────────────
+f1data/
+data/
+output/
+
+# ─── ML models & caches ──────────────────────────────
+*.pt
+*.pth
+*.bin
+*.onnx
+*.safetensors
+GroundingDINO/
+sam2/
+
+# ─── Secrets ──────────────────────────────────────────
+.env
+*.pem
+*.key
+
+# ─── GLB 3D models (too large for git) ────────────────
+frontend/public/models/
+*.glb
+
+# ─── OS / IDE ─────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ─── Docker ───────────────────────────────────────────
+*.tar
+
+# ─── Claude Code ──────────────────────────────────────
+.claude/

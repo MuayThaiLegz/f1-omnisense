@@ -1,0 +1,32 @@
+# Python venv
+fienv/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.mypy_cache/
+
+# Node
+frontend/node_modules/
+frontend/dist/
+
+# Large data (mounted as volumes)
+f1data/
+data/
+output/
+pipeline/output/
+frontend/public/models/
+
+# ML models (not needed in Docker build)
+sam2/
+GroundingDINO/
+*.pth
+*.pt
+
+# Secrets
+.env
+
+# Dev artifacts
+*.log
+.DS_Store
+.git/
