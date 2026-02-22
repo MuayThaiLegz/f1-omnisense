@@ -424,16 +424,13 @@ async def jolpica_race_results():
 
 @app.get("/api/local/jolpica/driver_standings")
 async def jolpica_driver_standings():
-    db = get_data_db()
-    # Build standings from race_results
-    docs = list(db["race_results"].find({}, {"_id": 0}).sort([("season", -1), ("round", -1)]))
-    return docs
+    # Return empty — frontend falls back to live Jolpica API
+    return []
 
 @app.get("/api/local/jolpica/constructor_standings")
 async def jolpica_constructor_standings():
-    db = get_data_db()
-    docs = list(db["race_results"].find({}, {"_id": 0}).sort([("season", -1), ("round", -1)]))
-    return docs
+    # Return empty — frontend falls back to live Jolpica API
+    return []
 
 @app.get("/api/local/jolpica/qualifying")
 async def jolpica_qualifying():
