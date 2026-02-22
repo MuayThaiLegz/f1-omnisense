@@ -402,6 +402,131 @@ async def upload_document(file: UploadFile = File(...)):
         os.unlink(tmp_path)
 
 
+# ── Data API — serve MongoDB collections to frontend ─────────────────────
+
+from pymongo import MongoClient as _MongoClient
+
+_data_client: _MongoClient | None = None
+_data_db = None
+
+def get_data_db():
+    global _data_client, _data_db
+    if _data_db is None:
+        _data_client = _MongoClient(os.getenv("MONGODB_URI", ""))
+        _data_db = _data_client[os.getenv("MONGODB_DB", "McLaren_f1")]
+    return _data_db
+
+@app.get("/api/local/jolpica/race_results")
+async def jolpica_race_results():
+    db = get_data_db()
+    docs = list(db["race_results"].find({}, {"_id": 0}))
+    return docs
+
+@app.get("/api/local/jolpica/driver_standings")
+async def jolpica_driver_standings():
+    db = get_data_db()
+    # Build standings from race_results
+    docs = list(db["race_results"].find({}, {"_id": 0}).sort([("season", -1), ("round", -1)]))
+    return docs
+
+@app.get("/api/local/jolpica/constructor_standings")
+async def jolpica_constructor_standings():
+    db = get_data_db()
+    docs = list(db["race_results"].find({}, {"_id": 0}).sort([("season", -1), ("round", -1)]))
+    return docs
+
+@app.get("/api/local/jolpica/qualifying")
+async def jolpica_qualifying():
+    return []
+
+@app.get("/api/local/jolpica/circuits")
+async def jolpica_circuits():
+    return []
+
+@app.get("/api/local/jolpica/pit_stops")
+async def jolpica_pit_stops():
+    return []
+
+@app.get("/api/local/jolpica/lap_times")
+async def jolpica_lap_times():
+    return []
+
+@app.get("/api/local/jolpica/drivers")
+async def jolpica_drivers():
+    return []
+
+@app.get("/api/local/jolpica/seasons")
+async def jolpica_seasons():
+    return []
+
+@app.get("/api/local/pipeline/anomaly")
+async def pipeline_anomaly():
+    db = get_data_db()
+    snapshot = db["anomaly_scores_snapshot"].find_one({}, {"_id": 0})
+    return snapshot or {}
+
+@app.get("/api/local/pipeline/intelligence")
+async def pipeline_intelligence():
+    return {}
+
+@app.get("/api/local/pipeline/gdino")
+async def pipeline_gdino():
+    return {}
+
+@app.get("/api/local/pipeline/fused")
+async def pipeline_fused():
+    return {}
+
+@app.get("/api/local/pipeline/minicpm")
+async def pipeline_minicpm():
+    return {}
+
+@app.get("/api/local/pipeline/videomae")
+async def pipeline_videomae():
+    return {}
+
+@app.get("/api/local/pipeline/timesformer")
+async def pipeline_timesformer():
+    return {}
+
+@app.get("/api/local/openf1/{collection}")
+async def openf1_data(collection: str):
+    return []
+
+@app.get("/api/local/mccar-summary/{year}/{driver}")
+async def mccar_summary(year: str, driver: str):
+    db = get_data_db()
+    docs = list(db["telemetry"].find(
+        {"Driver": driver, "_source_file": {"$regex": f"^{year}"}},
+        {"_id": 0}
+    ).limit(500))
+    return docs
+
+@app.get("/api/local/{path:path}")
+async def local_catchall(path: str):
+    """Catch-all for /api/local/ routes — try MongoDB, else return empty."""
+    # Try to serve CSV-like data from telemetry collection
+    if path.startswith("f1data/") or path.startswith("mccar/") or path.startswith("mcracecontext/"):
+        db = get_data_db()
+        # Map path to collection query
+        parts = path.split("/")
+        if "McCar" in path or "mccar" in path:
+            docs = list(db["telemetry"].find(
+                {"_data_type": {"$ne": "biometrics"}},
+                {"_id": 0}
+            ).limit(1000))
+            if docs:
+                # Convert to CSV
+                headers = list(docs[0].keys())
+                lines = [",".join(headers)]
+                for d in docs:
+                    lines.append(",".join(str(d.get(h, "")) for h in headers))
+                from starlette.responses import PlainTextResponse
+                return PlainTextResponse("\n".join(lines))
+        return ""
+    return []
+
+
 # ── Run ──────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
