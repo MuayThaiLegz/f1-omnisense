@@ -1,0 +1,17 @@
+f1data/
+data/
+output/
+frontend/
+fienv/
+GroundingDINO/
+sam2/
+*.pt
+*.pth
+*.bin
+*.onnx
+*.safetensors
+*.glb
+*.tar
+node_modules/
+__pycache__/
+.git/

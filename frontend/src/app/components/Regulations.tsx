@@ -23,14 +23,14 @@ export function Regulations() {
   }, []);
 
   const categories = useMemo(() => {
-    if (!data) return [];
+    if (!data?.rules) return [];
     const cats = new Set<string>();
     data.rules.forEach((r) => { if (r.category) cats.add(r.category); });
     return ['all', ...Array.from(cats).sort()];
   }, [data]);
 
   const filteredRules = useMemo(() => {
-    if (!data) return [];
+    if (!data?.rules) return [];
     let rules = data.rules;
     if (selectedCategory !== 'all') {
       rules = rules.filter((r) => r.category === selectedCategory);
@@ -47,7 +47,7 @@ export function Regulations() {
   }, [data, selectedCategory, search]);
 
   const filteredDimensions = useMemo(() => {
-    if (!data) return [];
+    if (!data?.dimensional_data) return [];
     if (!search) return data.dimensional_data;
     const q = search.toLowerCase();
     return data.dimensional_data.filter((d) =>
@@ -57,7 +57,7 @@ export function Regulations() {
   }, [data, search]);
 
   const filteredEquipment = useMemo(() => {
-    if (!data) return [];
+    if (!data?.equipment) return [];
     if (!search) return data.equipment;
     const q = search.toLowerCase();
     return data.equipment.filter((e) =>
@@ -76,7 +76,7 @@ export function Regulations() {
     );
   }
 
-  if (!data) {
+  if (!data?.rules) {
     return (
       <div className="flex items-center justify-center h-64">
         <BookOpen className="w-6 h-6 text-amber-400" />
@@ -104,9 +104,9 @@ export function Regulations() {
         {/* Tabs */}
         <div className="flex items-center bg-[#12121e] border border-[rgba(255,128,0,0.12)] rounded-lg overflow-hidden">
           {([
-            { id: 'rules' as TabType, label: 'Rules', icon: <BookOpen className="w-3 h-3" />, count: data.stats.total_rules },
-            { id: 'dimensions' as TabType, label: 'Dimensions', icon: <Ruler className="w-3 h-3" />, count: data.stats.total_dimensions },
-            { id: 'equipment' as TabType, label: 'Equipment', icon: <Cog className="w-3 h-3" />, count: data.stats.total_equipment },
+            { id: 'rules' as TabType, label: 'Rules', icon: <BookOpen className="w-3 h-3" />, count: data.stats?.total_rules ?? 0 },
+            { id: 'dimensions' as TabType, label: 'Dimensions', icon: <Ruler className="w-3 h-3" />, count: data.stats?.total_dimensions ?? 0 },
+            { id: 'equipment' as TabType, label: 'Equipment', icon: <Cog className="w-3 h-3" />, count: data.stats?.total_equipment ?? 0 },
           ]).map((tab) => (
             <button
               key={tab.id}
