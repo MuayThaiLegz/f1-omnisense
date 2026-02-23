@@ -207,7 +207,7 @@ export function CarTelemetry() {
   useEffect(() => {
     if (tab !== 'season') return;
     setSummaryLoading(true);
-    fetch(`/api/local/mccar-summary/${year}/${driver}`)
+    fetch(`/api/mccar-summary/${year}/${driver}`)
       .then(res => res.json())
       .then(data => setSeasonSummary(data))
       .catch(() => setSeasonSummary([]))
@@ -230,8 +230,8 @@ export function CarTelemetry() {
     if (tab !== 'h2h' || h2hMode !== 'season') return;
     setH2hLoading(true);
     Promise.all([
-      fetch(`/api/local/mccar-summary/${year}/NOR`).then(r => r.json()).catch(() => []),
-      fetch(`/api/local/mccar-summary/${year}/PIA`).then(r => r.json()).catch(() => []),
+      fetch(`/api/mccar-summary/${year}/NOR`).then(r => r.json()).catch(() => []),
+      fetch(`/api/mccar-summary/${year}/PIA`).then(r => r.json()).catch(() => []),
     ]).then(([nor, pia]) => { setH2hSeasonNor(nor); setH2hSeasonPia(pia); })
       .finally(() => setH2hLoading(false));
   }, [year, tab, h2hMode]);
@@ -254,8 +254,8 @@ export function CarTelemetry() {
     if (tab !== 'racecompare' || compareMode !== 'year') return;
     setCompareLoading(true);
     Promise.all([
-      fetch(`/api/local/mccar-summary/2023/${driver}`).then(r => r.json()).catch(() => []),
-      fetch(`/api/local/mccar-summary/2024/${driver}`).then(r => r.json()).catch(() => []),
+      fetch(`/api/mccar-summary/2023/${driver}`).then(r => r.json()).catch(() => []),
+      fetch(`/api/mccar-summary/2024/${driver}`).then(r => r.json()).catch(() => []),
     ]).then(([s23, s24]) => { setCompareSeason23(s23); setCompareSeason24(s24); })
       .finally(() => setCompareLoading(false));
   }, [driver, tab, compareMode]);

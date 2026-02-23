@@ -16,7 +16,7 @@ export function Regulations() {
   const [activeTab, setActiveTab] = useState<TabType>('rules');
 
   useEffect(() => {
-    fetch('/api/local/pipeline/intelligence')
+    fetch('/api/pipeline/intelligence')
       .then((r) => r.json())
       .then((d) => { setData(d); setLoading(false); })
       .catch(() => setLoading(false));

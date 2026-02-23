@@ -1,7 +1,7 @@
 import type { JolpicaDriverStanding, JolpicaConstructorStanding, JolpicaRaceResult } from '../types';
 
 const BASE = 'https://api.jolpi.ca/ergast/f1';
-const LOCAL_BASE = '/api/local/jolpica';
+const LOCAL_BASE = '/api/jolpica';
 
 async function fetchLocal<T>(route: string): Promise<T | null> {
   try {

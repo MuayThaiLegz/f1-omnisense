@@ -227,7 +227,7 @@ export function DriverBiometrics() {
   useEffect(() => {
     if (tab !== 'season') return;
     setSummaryLoading(true);
-    fetch(`/api/local/mcdriver-summary/${year}/${driver}`)
+    fetch(`/api/mcdriver-summary/${year}/${driver}`)
       .then(res => res.json())
       .then(data => setSeasonSummary(data))
       .catch(() => setSeasonSummary([]))
@@ -250,8 +250,8 @@ export function DriverBiometrics() {
     if (tab !== 'h2h' || h2hMode !== 'season') return;
     setH2hLoading(true);
     Promise.all([
-      fetch(`/api/local/mcdriver-summary/${year}/NOR`).then(r => r.json()).catch(() => []),
-      fetch(`/api/local/mcdriver-summary/${year}/PIA`).then(r => r.json()).catch(() => []),
+      fetch(`/api/mcdriver-summary/${year}/NOR`).then(r => r.json()).catch(() => []),
+      fetch(`/api/mcdriver-summary/${year}/PIA`).then(r => r.json()).catch(() => []),
     ]).then(([nor, pia]) => {
       setH2hSeasonNor(nor);
       setH2hSeasonPia(pia);
@@ -278,8 +278,8 @@ export function DriverBiometrics() {
     if (tab !== 'racecompare' || compareMode !== 'year') return;
     setCompareLoading(true);
     Promise.all([
-      fetch(`/api/local/mcdriver-summary/2023/${driver}`).then(r => r.json()).catch(() => []),
-      fetch(`/api/local/mcdriver-summary/2024/${driver}`).then(r => r.json()).catch(() => []),
+      fetch(`/api/mcdriver-summary/2023/${driver}`).then(r => r.json()).catch(() => []),
+      fetch(`/api/mcdriver-summary/2024/${driver}`).then(r => r.json()).catch(() => []),
     ]).then(([s23, s24]) => {
       setCompareSeason23(s23);
       setCompareSeason24(s24);

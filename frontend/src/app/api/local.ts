@@ -1,6 +1,6 @@
 // Local data API — reads pre-fetched JSON from /f1/data/other/ via Vite dev server
 
-const LOCAL_BASE = '/api/local';
+const LOCAL_BASE = '/api';
 
 async function fetchLocal<T>(route: string): Promise<T> {
   const res = await fetch(`${LOCAL_BASE}/${route}`);

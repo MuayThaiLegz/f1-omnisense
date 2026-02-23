@@ -53,7 +53,7 @@ export function AIInsights() {
   }, []);
 
   useEffect(() => {
-    fetch('/api/local/pipeline/intelligence')
+    fetch('/api/pipeline/intelligence')
       .then((r) => r.json())
       .then((d) => { setData(d); setExpandedDocs(new Set(d.documents.map((doc: DocumentMeta) => doc.name))); setLoading(false); })
       .catch(() => setLoading(false));
