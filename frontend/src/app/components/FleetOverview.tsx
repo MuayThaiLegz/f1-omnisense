@@ -117,7 +117,7 @@ export function FleetOverview() {
   useEffect(() => {
     const load = async () => {
       try {
-        const res = await fetch('/api/local/pipeline/anomaly');
+        const res = await fetch('/api/pipeline/anomaly');
         const data = await res.json();
         const mapped: VehicleData[] = (data.drivers ?? []).map((d: any) => {
           const latestRace: RaceHealth | undefined = d.races?.[d.races.length - 1];
