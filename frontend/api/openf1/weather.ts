@@ -1,25 +1,18 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getDb, buildSessionMap } from '../_db.js';
+import { getDb } from '../_db.js';
 
-export default async function handler(_req: VercelRequest, res: VercelResponse) {
+export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const db = await getDb();
-    const sources: string[] = await db.collection('telemetry').distinct('_source_file');
-    const { yearRaceToKey } = buildSessionMap(sources);
-    const weather: any[] = [];
-
-    for (const [yrRace, sk] of Object.entries(yearRaceToKey)) {
-      const year = yrRace.split('|')[0];
-      weather.push({
-        session_key: sk, meeting_key: sk,
-        date: `${year}-06-01T14:00:00`, air_temperature: 25.0,
-        track_temperature: 40.0, humidity: 55, pressure: 1013.0,
-        rainfall: false, wind_direction: 180, wind_speed: 3.5,
-      });
+    const filter: Record<string, any> = {};
+    for (const [k, v] of Object.entries(req.query)) {
+      if (typeof v !== 'string') continue;
+      const num = Number(v);
+      filter[k] = !isNaN(num) && v.trim() !== '' ? num : v;
     }
-
-    res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=600');
-    return res.json(weather);
+    const docs = await db.collection('openf1_weather').find(filter, { projection: { _id: 0 } }).toArray();
+    res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=120');
+    return res.json(docs);
   } catch (e: any) {
     return res.status(500).json({ error: e.message });
   }

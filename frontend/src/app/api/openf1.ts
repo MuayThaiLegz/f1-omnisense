@@ -6,36 +6,13 @@ import type {
 const LOCAL_BASE = '/api/openf1';
 
 async function fetchOpenF1<T>(endpoint: string, params?: Record<string, string | number>): Promise<T[]> {
-  const res = await fetch(`${LOCAL_BASE}/${endpoint}`);
+  const qs = params
+    ? '?' + Object.entries(params).map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&')
+    : '';
+  const res = await fetch(`${LOCAL_BASE}/${endpoint}${qs}`);
   if (!res.ok) return [];
   const data = await res.json();
-
-  if (Array.isArray(data) && data.length > 0) {
-    if (params) {
-      return data.filter((item: any) =>
-        Object.entries(params).every(([k, v]) => String(item[k]) === String(v))
-      ) as T[];
-    }
-    return data as T[];
-  }
-
-  // Handle object-keyed data (e.g., keyed by session_key)
-  if (data && typeof data === 'object' && !Array.isArray(data) && params?.session_key) {
-    const sessionData = data[String(params.session_key)];
-    if (Array.isArray(sessionData) && sessionData.length > 0) {
-      const otherParams = Object.fromEntries(
-        Object.entries(params).filter(([k]) => k !== 'session_key')
-      );
-      if (Object.keys(otherParams).length > 0) {
-        return sessionData.filter((item: any) =>
-          Object.entries(otherParams).every(([k, v]) => String(item[k]) === String(v))
-        ) as T[];
-      }
-      return sessionData as T[];
-    }
-  }
-
-  return [];
+  return Array.isArray(data) ? data as T[] : [];
 }
 
 export async function getSessions(year?: number): Promise<OpenF1Session[]> {

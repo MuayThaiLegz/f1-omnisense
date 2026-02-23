@@ -200,21 +200,21 @@ export function TrackMapGL({
   // ─── Render ────────────────────────────────────────────────────
   if (loading) {
     return (
-      <div className={`bg-[#12121e] rounded-xl border border-[rgba(255,128,0,0.08)] flex items-center justify-center ${className}`} style={{ height }}>
-        <div className="text-muted-foreground text-xs animate-pulse">Loading track map...</div>
+      <div className={`bg-[#1A1F2E] rounded-xl border border-[rgba(255,128,0,0.12)] flex items-center justify-center ${className}`} style={{ height }}>
+        <div className="text-muted-foreground text-sm animate-pulse">Loading track map...</div>
       </div>
     );
   }
 
   return (
-    <div ref={containerRef} className={`relative bg-[#12121e] rounded-xl border border-[rgba(255,128,0,0.08)] overflow-hidden ${className}`} style={{ height }}>
+    <div ref={containerRef} className={`relative bg-[#1A1F2E] rounded-xl border border-[rgba(255,128,0,0.12)] overflow-hidden ${className}`} style={{ height }}>
       {/* Header overlay */}
-      <div className="absolute top-0 left-0 right-0 z-10 p-3 bg-gradient-to-b from-[#0a0a12ee] to-transparent pointer-events-none">
+      <div className="absolute top-0 left-0 right-0 z-10 p-3 bg-gradient-to-b from-[#0D1117ee] to-transparent pointer-events-none">
         <div className="flex items-center gap-2">
           <MapPin className="w-3.5 h-3.5 text-[#FF8000]" />
-          <span className="text-xs font-medium text-foreground">{circuitName}</span>
-          <span className="text-[10px] text-muted-foreground">{locality}, {country}</span>
-          <span className="text-[10px] text-muted-foreground ml-auto">{lengthKm} km</span>
+          <span className="text-sm font-medium text-foreground">{circuitName}</span>
+          <span className="text-[12px] text-muted-foreground">{locality}, {country}</span>
+          <span className="text-[12px] text-muted-foreground ml-auto">{lengthKm} km</span>
         </div>
       </div>
 
@@ -243,7 +243,7 @@ export function TrackMapGL({
               id="track-asphalt-outer"
               type="line"
               paint={{
-                'line-color': '#2a2a3e',
+                'line-color': '#2A3142',
                 'line-width': 16,
                 'line-opacity': 0.95,
               }}
@@ -398,7 +398,7 @@ export function TrackMapGL({
         {/* ── DRS labels ── */}
         {drsLabels.map((pos, i) => (
           <Marker key={`drs-${i}`} longitude={pos.lng} latitude={pos.lat} anchor="center">
-            <div className="bg-[#00ff8833] border border-[#00ff8866] rounded px-1 py-0.5 text-[8px] font-bold text-[#00ff88] tracking-wider">
+            <div className="bg-[#00ff8833] border border-[#00ff8866] rounded px-1 py-0.5 text-[10px] font-bold text-[#00ff88] tracking-wider">
               DRS
             </div>
           </Marker>
@@ -414,7 +414,7 @@ export function TrackMapGL({
                   background: `repeating-conic-gradient(#fff 0% 25%, #111 0% 50%) 50%/6px 6px`,
                 }}
               />
-              <span className="text-[7px] text-white/60 mt-0.5 tracking-wider font-bold">S/F</span>
+              <span className="text-[9px] text-white/60 mt-0.5 tracking-wider font-bold">S/F</span>
             </div>
           </Marker>
         )}
@@ -436,8 +436,8 @@ export function TrackMapGL({
               }}
               onMouseLeave={() => setHoveredTurn(null)}
             >
-              <div className="w-4 h-4 rounded-full bg-[#0a0a12] border border-white/40 flex items-center justify-center">
-                <span className="text-[7px] text-white font-bold">{turn.number}</span>
+              <div className="w-4 h-4 rounded-full bg-[#0D1117] border border-white/40 flex items-center justify-center">
+                <span className="text-[9px] text-white font-bold">{turn.number}</span>
               </div>
             </div>
           </Marker>
@@ -468,7 +468,7 @@ export function TrackMapGL({
               />
               {/* Label */}
               <div
-                className="text-[7px] font-bold mt-0.5 px-1 rounded z-10"
+                className="text-[9px] font-bold mt-0.5 px-1 rounded z-10"
                 style={{
                   backgroundColor: `${car.color}cc`,
                   color: '#fff',
@@ -485,15 +485,15 @@ export function TrackMapGL({
       {/* ── Turn tooltip ── */}
       {hoveredTurn && (
         <div
-          className="absolute z-20 bg-[#0a0a12ee] border border-[rgba(255,128,0,0.25)] rounded-lg p-2 pointer-events-none"
+          className="absolute z-20 bg-[#0D1117ee] border border-[rgba(255,128,0,0.25)] rounded-lg p-2 pointer-events-none"
           style={{ left: tooltipPos.x + 12, top: tooltipPos.y - 40 }}
         >
-          <div className="text-[10px] font-bold text-foreground">
+          <div className="text-[12px] font-bold text-foreground">
             Turn {hoveredTurn.number}
             {hoveredTurn.name && <span className="text-[#FF8000] ml-1">{hoveredTurn.name}</span>}
           </div>
           {hoveredTurn.gear && (
-            <div className="text-[9px] text-muted-foreground">
+            <div className="text-[11px] text-muted-foreground">
               Gear {hoveredTurn.gear} &middot; {hoveredTurn.speedKph} km/h
             </div>
           )}
@@ -506,10 +506,10 @@ export function TrackMapGL({
           <button
             key={mode}
             onClick={() => setColorMode(mode)}
-            className={`px-2 py-0.5 rounded text-[8px] font-bold tracking-wider transition-all ${
+            className={`px-2 py-0.5 rounded text-[10px] font-bold tracking-wider transition-all ${
               colorMode === mode
                 ? 'bg-[#FF8000] text-white'
-                : 'bg-[#1a1a2e] text-muted-foreground hover:text-foreground'
+                : 'bg-[#222838] text-muted-foreground hover:text-foreground'
             }`}
           >
             {mode.toUpperCase()}
@@ -523,7 +523,7 @@ export function TrackMapGL({
           {['S1', 'S2', 'S3'].map((label, i) => (
             <div key={label} className="flex items-center gap-1">
               <div className="w-2 h-2 rounded-full" style={{ backgroundColor: SECTOR_COLORS[i] }} />
-              <span className="text-[8px] text-muted-foreground font-mono">{label}</span>
+              <span className="text-[10px] text-muted-foreground font-mono">{label}</span>
             </div>
           ))}
         </div>

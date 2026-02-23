@@ -49,12 +49,12 @@ export default function App() {
   };
 
   return (
-    <div className="h-full flex bg-[#0a0a12] font-['Inter',sans-serif] overflow-hidden">
+    <div className="h-full flex bg-[#0D1117] font-['Inter',sans-serif] overflow-hidden">
       <Sidebar activeView={activeView} onViewChange={setActiveView} />
 
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Top Bar */}
-        <header className="h-12 border-b border-[rgba(255,128,0,0.12)] bg-[#0d0d18] flex items-center justify-between px-4 shrink-0">
+        <header className="h-12 border-b border-[rgba(255,128,0,0.12)] bg-[#0D1117] flex items-center justify-between px-4 shrink-0">
           <nav className="flex items-center gap-1.5 text-[11px] tracking-wide leading-none">
             <span className="text-muted-foreground">F1 OmniSense</span>
             <ChevronRight className="w-3 h-3 text-[rgba(255,128,0,0.3)] shrink-0" />
@@ -71,7 +71,7 @@ export default function App() {
                 <span className="text-muted-foreground">OpenF1 + Jolpica</span>
               </div>
             </div>
-            <div className="flex items-center gap-1.5 bg-[#1a1a2e] rounded-lg px-3 py-1">
+            <div className="flex items-center gap-1.5 bg-[#222838] rounded-lg px-3 py-1">
               <Clock className="w-3 h-3 text-[#FF8000]" />
               <span className="text-[10px] font-mono text-foreground">
                 {currentTime.toLocaleTimeString('en-GB', { hour12: false })}
@@ -81,9 +81,14 @@ export default function App() {
         </header>
 
         {/* Page Header */}
-        <div className="px-5 pt-4 pb-2 shrink-0">
-          <h1 className="text-foreground">{viewTitles[activeView].title}</h1>
-          <p className="text-xs text-muted-foreground">{viewTitles[activeView].subtitle}</p>
+        <div className="px-5 pt-5 pb-3 shrink-0 border-b border-[rgba(255,128,0,0.08)]">
+          <div className="flex items-center gap-3">
+            <div className="w-1 h-7 rounded-full bg-[#FF8000]" />
+            <div>
+              <h1 className="text-foreground text-xl font-semibold tracking-tight">{viewTitles[activeView].title}</h1>
+              <p className="text-sm text-muted-foreground mt-0.5">{viewTitles[activeView].subtitle}</p>
+            </div>
+          </div>
         </div>
 
         {/* Content Area */}

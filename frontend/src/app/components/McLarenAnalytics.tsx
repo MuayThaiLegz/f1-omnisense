@@ -13,7 +13,7 @@ import { fetchCSV, parseCSV } from '../api/local';
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload?.length) {
     return (
-      <div className="bg-[#0a0a12] border border-[rgba(255,128,0,0.2)] rounded-lg p-2 text-[10px]">
+      <div className="bg-[#0D1117] border border-[rgba(255,128,0,0.2)] rounded-lg p-2 text-[12px]">
         <div className="text-muted-foreground mb-1">{label}</div>
         {payload.map((entry: any, index: number) => (
           <div key={index} className="flex items-center gap-2">
@@ -47,7 +47,7 @@ export function McLarenAnalytics() {
   return (
     <div className="space-y-4">
       {/* Tab Switcher */}
-      <div className="flex items-center gap-1 bg-[#12121e] rounded-lg p-0.5 border border-[rgba(255,128,0,0.12)] w-fit">
+      <div className="flex items-center gap-1 bg-[#1A1F2E] rounded-lg p-0.5 border border-[rgba(255,128,0,0.12)] w-fit">
         {([
           { id: 'season' as Tab, label: 'Season Overview' },
           { id: 'mclaren' as Tab, label: 'McLaren Data' },
@@ -55,7 +55,7 @@ export function McLarenAnalytics() {
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className={`text-xs px-4 py-1.5 rounded-md transition-all ${
+            className={`text-sm px-4 py-1.5 rounded-md transition-all ${
               tab === t.id ? 'bg-[#FF8000]/10 text-[#FF8000]' : 'text-muted-foreground hover:text-foreground'
             }`}
           >
@@ -193,17 +193,17 @@ function SeasonOverview() {
 
       <div className="grid grid-cols-12 gap-4">
         {/* Driver Championship Standings */}
-        <div className="col-span-8 bg-[#12121e] border border-[rgba(255,128,0,0.08)] rounded-xl p-4">
+        <div className="col-span-8 bg-[#1A1F2E] border border-[rgba(255,128,0,0.12)] rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.3)] p-4">
           <div className="flex items-center justify-between mb-3">
             <div>
-              <h3 className="text-xs text-foreground">Driver Championship Standings</h3>
-              <p className="text-[10px] text-muted-foreground">Points distribution — live from Jolpica API</p>
+              <h3 className="text-sm text-foreground">Driver Championship Standings</h3>
+              <p className="text-[12px] text-muted-foreground">Points distribution — live from Jolpica API</p>
             </div>
           </div>
           <div className="h-[280px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={driverChartData} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,128,0,0.06)" />
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,128,0,0.12)" />
                 <XAxis type="number" stroke="#8888a0" fontSize={10} />
                 <YAxis dataKey="name" type="category" stroke="#8888a0" fontSize={10} width={50} />
                 <Tooltip content={<CustomTooltip />} />
@@ -218,19 +218,19 @@ function SeasonOverview() {
         </div>
 
         {/* Constructor Standings */}
-        <div className="col-span-4 bg-[#12121e] border border-[rgba(255,128,0,0.08)] rounded-xl p-4">
-          <h3 className="text-xs text-foreground mb-1">Constructor Standings</h3>
-          <p className="text-[10px] text-muted-foreground mb-3">Team championship</p>
+        <div className="col-span-4 bg-[#1A1F2E] border border-[rgba(255,128,0,0.12)] rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.3)] p-4">
+          <h3 className="text-sm text-foreground mb-1">Constructor Standings</h3>
+          <p className="text-[12px] text-muted-foreground mb-3">Team championship</p>
           <div className="space-y-2">
             {constructorChartData.map((team, index) => (
               <div key={team.name} className="flex items-center gap-2">
-                <span className="text-[10px] text-muted-foreground w-4 font-mono">{index + 1}</span>
+                <span className="text-[12px] text-muted-foreground w-4 font-mono">{index + 1}</span>
                 <div
                   className="w-2 h-5 rounded-full"
                   style={{ backgroundColor: teamColors[team.name] ?? '#555' }}
                 />
-                <span className="text-xs text-foreground flex-1 truncate">{team.name}</span>
-                <span className="text-xs font-mono text-[#FF8000]">{team.points}</span>
+                <span className="text-sm text-foreground flex-1 truncate">{team.name}</span>
+                <span className="text-sm font-mono text-[#FF8000]">{team.points}</span>
               </div>
             ))}
           </div>
@@ -239,14 +239,14 @@ function SeasonOverview() {
 
       <div className="grid grid-cols-12 gap-4">
         {/* Points Progression */}
-        <div className="col-span-7 bg-[#12121e] border border-[rgba(255,128,0,0.08)] rounded-xl p-4">
-          <h3 className="text-xs text-foreground mb-1">Championship Points Progression</h3>
-          <p className="text-[10px] text-muted-foreground mb-3">Cumulative points — top 5 drivers</p>
+        <div className="col-span-7 bg-[#1A1F2E] border border-[rgba(255,128,0,0.12)] rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.3)] p-4">
+          <h3 className="text-sm text-foreground mb-1">Championship Points Progression</h3>
+          <p className="text-[12px] text-muted-foreground mb-3">Cumulative points — top 5 drivers</p>
           <div className="h-[220px]">
             {pointsProgressionData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={pointsProgressionData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,128,0,0.06)" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,128,0,0.12)" />
                   <XAxis dataKey="race" stroke="#8888a0" fontSize={9} />
                   <YAxis stroke="#8888a0" fontSize={10} />
                   <Tooltip content={<CustomTooltip />} />
@@ -264,7 +264,7 @@ function SeasonOverview() {
                 </LineChart>
               </ResponsiveContainer>
             ) : (
-              <div className="flex items-center justify-center h-full text-muted-foreground text-xs">
+              <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
                 No race data available
               </div>
             )}
@@ -272,14 +272,14 @@ function SeasonOverview() {
         </div>
 
         {/* McLaren Grid vs Finish */}
-        <div className="col-span-5 bg-[#12121e] border border-[rgba(255,128,0,0.08)] rounded-xl p-4">
-          <h3 className="text-xs text-foreground mb-1">McLaren: Grid vs Finish</h3>
-          <p className="text-[10px] text-muted-foreground mb-3">Recent races qualifying vs race position</p>
+        <div className="col-span-5 bg-[#1A1F2E] border border-[rgba(255,128,0,0.12)] rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.3)] p-4">
+          <h3 className="text-sm text-foreground mb-1">McLaren: Grid vs Finish</h3>
+          <p className="text-[12px] text-muted-foreground mb-3">Recent races qualifying vs race position</p>
           <div className="h-[220px]">
             {gridAnalysisData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={gridAnalysisData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,128,0,0.06)" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,128,0,0.12)" />
                   <XAxis dataKey="race" stroke="#8888a0" fontSize={9} />
                   <YAxis stroke="#8888a0" fontSize={10} reversed domain={[1, 20]} />
                   <Tooltip content={<CustomTooltip />} />
@@ -288,7 +288,7 @@ function SeasonOverview() {
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <div className="flex items-center justify-center h-full text-muted-foreground text-xs">
+              <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
                 No McLaren race data
               </div>
             )}
@@ -297,10 +297,10 @@ function SeasonOverview() {
       </div>
 
       {/* Race Results Table */}
-      <div className="bg-[#12121e] border border-[rgba(255,128,0,0.08)] rounded-xl p-4">
-        <h3 className="text-xs text-muted-foreground tracking-widest mb-3">SEASON RACE RESULTS</h3>
+      <div className="bg-[#1A1F2E] border border-[rgba(255,128,0,0.12)] rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.3)] p-4">
+        <h3 className="text-sm text-muted-foreground tracking-widest mb-3">SEASON RACE RESULTS</h3>
         <div className="space-y-1">
-          <div className="grid grid-cols-[40px_180px_120px_80px_80px_80px_1fr] gap-2 px-2 py-1 text-[9px] text-muted-foreground tracking-wider">
+          <div className="grid grid-cols-[40px_180px_120px_80px_80px_80px_1fr] gap-2 px-2 py-1 text-[11px] text-muted-foreground tracking-wider">
             <span>RND</span>
             <span>GRAND PRIX</span>
             <span>CIRCUIT</span>
@@ -312,7 +312,7 @@ function SeasonOverview() {
           {raceResults?.slice(-10).reverse().map((race) => {
             const winner = race.Results[0];
             return (
-              <div key={race.round} className="grid grid-cols-[40px_180px_120px_80px_80px_80px_1fr] gap-2 px-2 py-1.5 rounded-lg hover:bg-[#1a1a2e] transition-colors text-xs items-center">
+              <div key={race.round} className="grid grid-cols-[40px_180px_120px_80px_80px_80px_1fr] gap-2 px-2 py-1.5 rounded-lg hover:bg-[#222838] transition-colors text-sm items-center">
                 <span className="text-[#FF8000] font-mono">R{race.round}</span>
                 <span className="text-foreground truncate">{race.raceName.replace(' Grand Prix', '')}</span>
                 <span className="text-muted-foreground truncate">{race.Circuit.Location.locality}</span>
@@ -473,12 +473,12 @@ function McLarenDeepDive() {
     <div className="space-y-4">
       {/* Year Selector + KPIs */}
       <div className="flex items-center gap-3 mb-1">
-        <div className="flex items-center gap-1 bg-[#12121e] rounded-lg p-0.5 border border-[rgba(255,128,0,0.12)]">
+        <div className="flex items-center gap-1 bg-[#1A1F2E] rounded-lg p-0.5 border border-[rgba(255,128,0,0.12)]">
           {(['2024', '2023'] as const).map(y => (
             <button
               key={y}
               onClick={() => setYear(y)}
-              className={`text-xs px-3 py-1.5 rounded-md transition-all ${
+              className={`text-sm px-3 py-1.5 rounded-md transition-all ${
                 year === y ? 'bg-[#FF8000]/10 text-[#FF8000]' : 'text-muted-foreground hover:text-foreground'
               }`}
             >
@@ -486,7 +486,7 @@ function McLarenDeepDive() {
             </button>
           ))}
         </div>
-        <span className="text-[10px] text-muted-foreground">McLaren F1 Team — Season Data from f1data/</span>
+        <span className="text-[12px] text-muted-foreground">McLaren F1 Team — Season Data from f1data/</span>
       </div>
 
       <div className="grid grid-cols-4 gap-3">
@@ -498,9 +498,9 @@ function McLarenDeepDive() {
 
       <div className="grid grid-cols-12 gap-4">
         {/* Points Progression */}
-        <div className="col-span-8 bg-[#12121e] border border-[rgba(255,128,0,0.08)] rounded-xl p-4">
-          <h3 className="text-xs text-foreground mb-1">Driver Points Progression</h3>
-          <p className="text-[10px] text-muted-foreground mb-3">Cumulative championship points — NOR vs PIA</p>
+        <div className="col-span-8 bg-[#1A1F2E] border border-[rgba(255,128,0,0.12)] rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.3)] p-4">
+          <h3 className="text-sm text-foreground mb-1">Driver Points Progression</h3>
+          <p className="text-[12px] text-muted-foreground mb-3">Cumulative championship points — NOR vs PIA</p>
           <div className="h-[260px]">
             {pointsProgression.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
@@ -515,7 +515,7 @@ function McLarenDeepDive() {
                       <stop offset="100%" stopColor="#00d4ff" stopOpacity={0} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,128,0,0.06)" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,128,0,0.12)" />
                   <XAxis dataKey="race" stroke="#8888a0" fontSize={9} angle={-30} textAnchor="end" height={50} />
                   <YAxis stroke="#8888a0" fontSize={10} />
                   <Tooltip content={<CustomTooltip />} />
@@ -524,20 +524,20 @@ function McLarenDeepDive() {
                 </AreaChart>
               </ResponsiveContainer>
             ) : (
-              <div className="flex items-center justify-center h-full text-muted-foreground text-xs">No data</div>
+              <div className="flex items-center justify-center h-full text-muted-foreground text-sm">No data</div>
             )}
           </div>
         </div>
 
         {/* Tire Compound Usage */}
-        <div className="col-span-4 bg-[#12121e] border border-[rgba(255,128,0,0.08)] rounded-xl p-4">
-          <h3 className="text-xs text-foreground mb-1">Race Tire Usage</h3>
-          <p className="text-[10px] text-muted-foreground mb-3">Stint compound distribution</p>
+        <div className="col-span-4 bg-[#1A1F2E] border border-[rgba(255,128,0,0.12)] rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.3)] p-4">
+          <h3 className="text-sm text-foreground mb-1">Race Tire Usage</h3>
+          <p className="text-[12px] text-muted-foreground mb-3">Stint compound distribution</p>
           <div className="h-[260px]">
             {compoundUsage.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={compoundUsage} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,128,0,0.06)" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,128,0,0.12)" />
                   <XAxis type="number" stroke="#8888a0" fontSize={10} />
                   <YAxis dataKey="name" type="category" stroke="#8888a0" fontSize={10} width={80} />
                   <Tooltip content={<CustomTooltip />} />
@@ -549,7 +549,7 @@ function McLarenDeepDive() {
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <div className="flex items-center justify-center h-full text-muted-foreground text-xs">No tire data</div>
+              <div className="flex items-center justify-center h-full text-muted-foreground text-sm">No tire data</div>
             )}
           </div>
         </div>
@@ -557,14 +557,14 @@ function McLarenDeepDive() {
 
       <div className="grid grid-cols-12 gap-4">
         {/* Pit Stop Times */}
-        <div className="col-span-6 bg-[#12121e] border border-[rgba(255,128,0,0.08)] rounded-xl p-4">
-          <h3 className="text-xs text-foreground mb-1">Pit Stop Duration</h3>
-          <p className="text-[10px] text-muted-foreground mb-3">Average pit duration per race (seconds)</p>
+        <div className="col-span-6 bg-[#1A1F2E] border border-[rgba(255,128,0,0.12)] rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.3)] p-4">
+          <h3 className="text-sm text-foreground mb-1">Pit Stop Duration</h3>
+          <p className="text-[12px] text-muted-foreground mb-3">Average pit duration per race (seconds)</p>
           <div className="h-[220px]">
             {pitStopData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={pitStopData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,128,0,0.06)" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,128,0,0.12)" />
                   <XAxis dataKey="race" stroke="#8888a0" fontSize={9} angle={-30} textAnchor="end" height={50} />
                   <YAxis stroke="#8888a0" fontSize={10} />
                   <Tooltip content={<CustomTooltip />} />
@@ -573,20 +573,20 @@ function McLarenDeepDive() {
                 </LineChart>
               </ResponsiveContainer>
             ) : (
-              <div className="flex items-center justify-center h-full text-muted-foreground text-xs">No pit data</div>
+              <div className="flex items-center justify-center h-full text-muted-foreground text-sm">No pit data</div>
             )}
           </div>
         </div>
 
         {/* Grid vs Finish */}
-        <div className="col-span-6 bg-[#12121e] border border-[rgba(255,128,0,0.08)] rounded-xl p-4">
-          <h3 className="text-xs text-foreground mb-1">NOR: Grid vs Finish</h3>
-          <p className="text-[10px] text-muted-foreground mb-3">Qualifying position vs race result</p>
+        <div className="col-span-6 bg-[#1A1F2E] border border-[rgba(255,128,0,0.12)] rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.3)] p-4">
+          <h3 className="text-sm text-foreground mb-1">NOR: Grid vs Finish</h3>
+          <p className="text-[12px] text-muted-foreground mb-3">Qualifying position vs race result</p>
           <div className="h-[220px]">
             {gridVsFinish.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={gridVsFinish}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,128,0,0.06)" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,128,0,0.12)" />
                   <XAxis dataKey="race" stroke="#8888a0" fontSize={9} angle={-30} textAnchor="end" height={50} />
                   <YAxis stroke="#8888a0" fontSize={10} reversed domain={[1, 20]} />
                   <Tooltip content={<CustomTooltip />} />
@@ -595,17 +595,17 @@ function McLarenDeepDive() {
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <div className="flex items-center justify-center h-full text-muted-foreground text-xs">No grid data</div>
+              <div className="flex items-center justify-center h-full text-muted-foreground text-sm">No grid data</div>
             )}
           </div>
         </div>
       </div>
 
       {/* Team Championship Table */}
-      <div className="bg-[#12121e] border border-[rgba(255,128,0,0.08)] rounded-xl p-4">
-        <h3 className="text-xs text-muted-foreground tracking-widest mb-3">CONSTRUCTORS CHAMPIONSHIP PROGRESSION</h3>
+      <div className="bg-[#1A1F2E] border border-[rgba(255,128,0,0.12)] rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.3)] p-4">
+        <h3 className="text-sm text-muted-foreground tracking-widest mb-3">CONSTRUCTORS CHAMPIONSHIP PROGRESSION</h3>
         <div className="space-y-1">
-          <div className="grid grid-cols-[40px_140px_60px_80px_80px] gap-2 px-2 py-1 text-[9px] text-muted-foreground tracking-wider">
+          <div className="grid grid-cols-[40px_140px_60px_80px_80px] gap-2 px-2 py-1 text-[11px] text-muted-foreground tracking-wider">
             <span>RND</span>
             <span>GRAND PRIX</span>
             <span>POS</span>
@@ -613,7 +613,7 @@ function McLarenDeepDive() {
             <span>GAINED</span>
           </div>
           {teamProgression.map((row, i) => (
-            <div key={i} className="grid grid-cols-[40px_140px_60px_80px_80px] gap-2 px-2 py-1.5 rounded-lg hover:bg-[#1a1a2e] transition-colors text-xs items-center">
+            <div key={i} className="grid grid-cols-[40px_140px_60px_80px_80px] gap-2 px-2 py-1.5 rounded-lg hover:bg-[#222838] transition-colors text-sm items-center">
               <span className="text-[#FF8000] font-mono">R{i + 1}</span>
               <span className="text-foreground truncate">{row.race}</span>
               <span className="font-mono text-foreground">P{row.position}</span>
@@ -635,13 +635,13 @@ function KPI({ icon, label, value, detail }: {
   icon: React.ReactNode; label: string; value: string; detail: string;
 }) {
   return (
-    <div className="bg-[#12121e] border border-[rgba(255,128,0,0.08)] rounded-xl p-3">
+    <div className="bg-[#1A1F2E] border border-[rgba(255,128,0,0.12)] rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.3)] p-3">
       <div className="flex items-center gap-2 mb-1.5">
         {icon}
-        <span className="text-[10px] text-muted-foreground tracking-wider">{label}</span>
+        <span className="text-[12px] text-muted-foreground tracking-wider">{label}</span>
       </div>
       <div className="text-lg font-mono text-foreground">{value}</div>
-      <div className="text-[10px] text-green-400 mt-0.5">{detail}</div>
+      <div className="text-[12px] text-green-400 mt-0.5">{detail}</div>
     </div>
   );
 }

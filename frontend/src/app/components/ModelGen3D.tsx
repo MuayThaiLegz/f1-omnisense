@@ -205,8 +205,8 @@ export function ModelGen3D() {
       {/* Upload + Options Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Image Upload */}
-        <div className="bg-[#12121e] rounded-xl border border-[rgba(255,128,0,0.08)] p-4">
-          <h3 className="text-xs font-medium text-foreground mb-3 flex items-center gap-2">
+        <div className="bg-[#1A1F2E] rounded-xl border border-[rgba(255,128,0,0.12)] p-4">
+          <h3 className="text-sm font-medium text-foreground mb-3 flex items-center gap-2">
             <Upload className="w-3.5 h-3.5 text-[#FF8000]" />
             Reference Image
           </h3>
@@ -220,8 +220,8 @@ export function ModelGen3D() {
               isDragOver
                 ? 'border-[#FF8000] bg-[#FF8000]/5'
                 : imagePreview
-                  ? 'border-[rgba(255,128,0,0.2)] bg-[#0a0a12]'
-                  : 'border-[rgba(255,128,0,0.12)] hover:border-[rgba(255,128,0,0.3)] bg-[#0a0a12]'
+                  ? 'border-[rgba(255,128,0,0.2)] bg-[#0D1117]'
+                  : 'border-[rgba(255,128,0,0.12)] hover:border-[rgba(255,128,0,0.3)] bg-[#0D1117]'
             }`}
           >
             {imagePreview ? (
@@ -229,8 +229,8 @@ export function ModelGen3D() {
             ) : (
               <div className="space-y-2">
                 <Box className="w-8 h-8 mx-auto text-muted-foreground" />
-                <p className="text-xs text-muted-foreground">Drop an F1 car image here or click to browse</p>
-                <p className="text-[10px] text-muted-foreground/60">PNG, JPG up to 10MB</p>
+                <p className="text-sm text-muted-foreground">Drop an F1 car image here or click to browse</p>
+                <p className="text-[12px] text-muted-foreground/60">PNG, JPG up to 10MB</p>
               </div>
             )}
             <input
@@ -244,20 +244,20 @@ export function ModelGen3D() {
 
           {/* Model name */}
           <div className="mt-3">
-            <label className="text-[10px] text-muted-foreground mb-1 block">Model Name</label>
+            <label className="text-[12px] text-muted-foreground mb-1 block">Model Name</label>
             <input
               type="text"
               value={modelName}
               onChange={(e) => setModelName(e.target.value)}
               placeholder="e.g. mcl38_front"
-              className="w-full bg-[#0a0a12] border border-[rgba(255,128,0,0.12)] rounded-lg px-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-[#FF8000]/40"
+              className="w-full bg-[#0D1117] border border-[rgba(255,128,0,0.12)] rounded-lg px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-[#FF8000]/40"
             />
           </div>
         </div>
 
         {/* Provider + Options */}
-        <div className="bg-[#12121e] rounded-xl border border-[rgba(255,128,0,0.08)] p-4">
-          <h3 className="text-xs font-medium text-foreground mb-3 flex items-center gap-2">
+        <div className="bg-[#1A1F2E] rounded-xl border border-[rgba(255,128,0,0.12)] p-4">
+          <h3 className="text-sm font-medium text-foreground mb-3 flex items-center gap-2">
             <Layers className="w-3.5 h-3.5 text-[#FF8000]" />
             Generation Options
           </h3>
@@ -276,39 +276,39 @@ export function ModelGen3D() {
                     provider === p.id
                       ? 'border-current bg-current/10'
                       : disabled
-                        ? 'border-[rgba(255,128,0,0.06)] bg-[#0a0a12] opacity-40 cursor-not-allowed'
-                        : 'border-[rgba(255,128,0,0.08)] bg-[#0a0a12] hover:border-[rgba(255,128,0,0.2)]'
+                        ? 'border-[rgba(255,128,0,0.12)] bg-[#0D1117] opacity-40 cursor-not-allowed'
+                        : 'border-[rgba(255,128,0,0.12)] bg-[#0D1117] hover:border-[rgba(255,128,0,0.2)]'
                   }`}
                   style={provider === p.id ? { color: p.color, borderColor: p.color } : undefined}
                 >
                   <Icon className="w-4 h-4 mx-auto mb-1" style={provider === p.id ? { color: p.color } : undefined} />
-                  <div className="text-[10px] font-medium" style={provider === p.id ? { color: p.color } : undefined}>{p.label}</div>
-                  <div className="text-[9px] text-muted-foreground">{p.sublabel}</div>
+                  <div className="text-[12px] font-medium" style={provider === p.id ? { color: p.color } : undefined}>{p.label}</div>
+                  <div className="text-[11px] text-muted-foreground">{p.sublabel}</div>
                 </button>
               );
             })}
           </div>
 
-          <p className="text-[10px] text-muted-foreground mb-3">
+          <p className="text-[12px] text-muted-foreground mb-3">
             {PROVIDERS.find(p => p.id === provider)?.desc}
           </p>
 
           {/* Hunyuan options */}
           {provider === 'hunyuan' && (
             <div className="space-y-2">
-              <label className="flex items-center gap-2 text-[10px] text-muted-foreground cursor-pointer">
+              <label className="flex items-center gap-2 text-[12px] text-muted-foreground cursor-pointer">
                 <input type="checkbox" checked={textured} onChange={(e) => setTextured(e.target.checked)}
-                  className="rounded border-[rgba(255,128,0,0.2)] bg-[#0a0a12] text-[#FF8000] focus:ring-[#FF8000]/30 w-3 h-3" />
+                  className="rounded border-[rgba(255,128,0,0.2)] bg-[#0D1117] text-[#FF8000] focus:ring-[#FF8000]/30 w-3 h-3" />
                 Generate with texture (slower, full color)
               </label>
               {!textured && (
                 <div>
-                  <label className="text-[10px] text-muted-foreground mb-1 block">PBR Material Preset</label>
+                  <label className="text-[12px] text-muted-foreground mb-1 block">PBR Material Preset</label>
                   <div className="relative">
                     <select
                       value={materialPreset}
                       onChange={(e) => setMaterialPreset(e.target.value)}
-                      className="w-full bg-[#0a0a12] border border-[rgba(255,128,0,0.12)] rounded-lg px-3 py-1.5 text-xs text-foreground appearance-none focus:outline-none focus:border-[#FF8000]/40"
+                      className="w-full bg-[#0D1117] border border-[rgba(255,128,0,0.12)] rounded-lg px-3 py-1.5 text-sm text-foreground appearance-none focus:outline-none focus:border-[#FF8000]/40"
                     >
                       {presets.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
                     </select>
@@ -323,18 +323,18 @@ export function ModelGen3D() {
           {provider === 'meshy' && (
             <div className="space-y-2">
               <div>
-                <label className="text-[10px] text-muted-foreground mb-1 block">Texture Prompt (optional)</label>
+                <label className="text-[12px] text-muted-foreground mb-1 block">Texture Prompt (optional)</label>
                 <input
                   type="text"
                   value={texturePrompt}
                   onChange={(e) => setTexturePrompt(e.target.value)}
                   placeholder="e.g. McLaren papaya orange livery, carbon fiber details"
-                  className="w-full bg-[#0a0a12] border border-[rgba(255,128,0,0.12)] rounded-lg px-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-[#FF8000]/40"
+                  className="w-full bg-[#0D1117] border border-[rgba(255,128,0,0.12)] rounded-lg px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-[#FF8000]/40"
                 />
               </div>
-              <label className="flex items-center gap-2 text-[10px] text-muted-foreground cursor-pointer">
+              <label className="flex items-center gap-2 text-[12px] text-muted-foreground cursor-pointer">
                 <input type="checkbox" checked={enablePbr} onChange={(e) => setEnablePbr(e.target.checked)}
-                  className="rounded border-[rgba(255,128,0,0.2)] bg-[#0a0a12] text-[#FF8000] focus:ring-[#FF8000]/30 w-3 h-3" />
+                  className="rounded border-[rgba(255,128,0,0.2)] bg-[#0D1117] text-[#FF8000] focus:ring-[#FF8000]/30 w-3 h-3" />
                 Enable PBR materials
               </label>
             </div>
@@ -344,22 +344,22 @@ export function ModelGen3D() {
           {provider === 'texture_paint' && (
             <div className="space-y-2">
               <div>
-                <label className="text-[10px] text-muted-foreground mb-1 block">Paint Prompt</label>
+                <label className="text-[12px] text-muted-foreground mb-1 block">Paint Prompt</label>
                 <input
                   type="text"
                   value={texturePrompt}
                   onChange={(e) => setTexturePrompt(e.target.value)}
                   placeholder="e.g. Formula 1 car with McLaren papaya livery"
-                  className="w-full bg-[#0a0a12] border border-[rgba(255,128,0,0.12)] rounded-lg px-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-[#FF8000]/40"
+                  className="w-full bg-[#0D1117] border border-[rgba(255,128,0,0.12)] rounded-lg px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-[#FF8000]/40"
                 />
               </div>
               <div>
-                <label className="text-[10px] text-muted-foreground mb-1 block">Material Preset</label>
+                <label className="text-[12px] text-muted-foreground mb-1 block">Material Preset</label>
                 <div className="relative">
                   <select
                     value={materialPreset}
                     onChange={(e) => setMaterialPreset(e.target.value)}
-                    className="w-full bg-[#0a0a12] border border-[rgba(255,128,0,0.12)] rounded-lg px-3 py-1.5 text-xs text-foreground appearance-none focus:outline-none focus:border-[#FF8000]/40"
+                    className="w-full bg-[#0D1117] border border-[rgba(255,128,0,0.12)] rounded-lg px-3 py-1.5 text-sm text-foreground appearance-none focus:outline-none focus:border-[#FF8000]/40"
                   >
                     {presets.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
                   </select>
@@ -373,7 +373,7 @@ export function ModelGen3D() {
           <button
             onClick={handleSubmit}
             disabled={!imageFile || submitting || (activeJob?.status === 'generating' || activeJob?.status === 'queued')}
-            className="mt-4 w-full flex items-center justify-center gap-2 rounded-lg py-2.5 text-xs font-medium transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+            className="mt-4 w-full flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-medium transition-all disabled:opacity-40 disabled:cursor-not-allowed"
             style={{
               background: `linear-gradient(135deg, ${PROVIDERS.find(p => p.id === provider)?.color}22, ${PROVIDERS.find(p => p.id === provider)?.color}11)`,
               border: `1px solid ${PROVIDERS.find(p => p.id === provider)?.color}44`,
@@ -388,9 +388,9 @@ export function ModelGen3D() {
 
       {/* Active Job Progress */}
       {activeJob && (
-        <div className="bg-[#12121e] rounded-xl border border-[rgba(255,128,0,0.08)] p-4">
+        <div className="bg-[#1A1F2E] rounded-xl border border-[rgba(255,128,0,0.12)] p-4">
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-xs font-medium text-foreground flex items-center gap-2">
+            <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
               {activeJob.status === 'completed' ? (
                 <CheckCircle2 className="w-3.5 h-3.5 text-green-400" />
               ) : activeJob.status === 'failed' ? (
@@ -400,14 +400,14 @@ export function ModelGen3D() {
               )}
               {activeJob.model_name}
             </h3>
-            <span className="text-[10px] px-2 py-0.5 rounded-full"
+            <span className="text-[12px] px-2 py-0.5 rounded-full"
               style={{ color: providerTag(activeJob.provider).color, background: `${providerTag(activeJob.provider).color}15` }}>
               {providerTag(activeJob.provider).label}
             </span>
           </div>
 
           {/* Progress bar */}
-          <div className="h-1.5 bg-[#0a0a12] rounded-full overflow-hidden mb-2">
+          <div className="h-1.5 bg-[#0D1117] rounded-full overflow-hidden mb-2">
             <div
               className="h-full rounded-full transition-all duration-500"
               style={{
@@ -416,12 +416,12 @@ export function ModelGen3D() {
               }}
             />
           </div>
-          <div className="flex items-center justify-between text-[10px]">
+          <div className="flex items-center justify-between text-[12px]">
             <span className="text-muted-foreground">{statusLabel(activeJob.status)}</span>
             <span className="text-muted-foreground">{activeJob.progress}%</span>
           </div>
           {activeJob.error && (
-            <p className="text-[10px] text-red-400 mt-2">{activeJob.error}</p>
+            <p className="text-[12px] text-red-400 mt-2">{activeJob.error}</p>
           )}
 
           {/* View completed model */}
@@ -429,14 +429,14 @@ export function ModelGen3D() {
             <div className="mt-3 flex gap-2">
               <button
                 onClick={() => { setViewingModel(activeJob.model_name); setViewingProvider(activeJob.provider); }}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] bg-[#FF8000]/10 text-[#FF8000] border border-[#FF8000]/20 hover:bg-[#FF8000]/20 transition-all"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] bg-[#FF8000]/10 text-[#FF8000] border border-[#FF8000]/20 hover:bg-[#FF8000]/20 transition-all"
               >
                 <Eye className="w-3 h-3" /> View 3D
               </button>
               <a
                 href={activeJob.glb_url}
                 download
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] bg-[#1a1a2e] text-muted-foreground border border-[rgba(255,128,0,0.08)] hover:text-foreground transition-all"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] bg-[#222838] text-muted-foreground border border-[rgba(255,128,0,0.12)] hover:text-foreground transition-all"
               >
                 <Download className="w-3 h-3" /> Download GLB
               </a>
@@ -447,15 +447,15 @@ export function ModelGen3D() {
 
       {/* GLB Viewer */}
       {viewingModel && (
-        <div className="bg-[#12121e] rounded-xl border border-[rgba(255,128,0,0.08)] overflow-hidden">
-          <div className="flex items-center justify-between px-4 py-2 border-b border-[rgba(255,128,0,0.08)]">
-            <h3 className="text-xs font-medium text-foreground flex items-center gap-2">
+        <div className="bg-[#1A1F2E] rounded-xl border border-[rgba(255,128,0,0.12)] overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-2 border-b border-[rgba(255,128,0,0.12)]">
+            <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
               <Eye className="w-3.5 h-3.5 text-[#FF8000]" />
               {viewingModel}
             </h3>
             <button
               onClick={() => setViewingModel(null)}
-              className="text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+              className="text-[12px] text-muted-foreground hover:text-foreground transition-colors"
             >
               Close
             </button>
@@ -470,15 +470,15 @@ export function ModelGen3D() {
 
       {/* Generated Models Gallery */}
       {models.length > 0 && (
-        <div className="bg-[#12121e] rounded-xl border border-[rgba(255,128,0,0.08)] p-4">
+        <div className="bg-[#1A1F2E] rounded-xl border border-[rgba(255,128,0,0.12)] p-4">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-xs font-medium text-foreground flex items-center gap-2">
+            <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
               <Box className="w-3.5 h-3.5 text-[#FF8000]" />
               Generated Models ({models.length})
             </h3>
             <button
               onClick={() => api.listModels().then(r => setModels(r.models)).catch(() => {})}
-              className="text-[10px] text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+              className="text-[12px] text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
             >
               <RefreshCw className="w-3 h-3" /> Refresh
             </button>
@@ -486,21 +486,21 @@ export function ModelGen3D() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
             {models.map((m) => (
-              <div key={m.model_name} className="bg-[#0a0a12] rounded-lg border border-[rgba(255,128,0,0.06)] p-3">
+              <div key={m.model_name} className="bg-[#0D1117] rounded-lg border border-[rgba(255,128,0,0.12)] p-3">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-medium text-foreground truncate">{m.model_name}</span>
+                  <span className="text-sm font-medium text-foreground truncate">{m.model_name}</span>
                   <div className="flex gap-1">
                     {m.has_hunyuan && (
-                      <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-[#3b82f6]/10 text-[#3b82f6]">Core</span>
+                      <span className="text-[11px] px-1.5 py-0.5 rounded-full bg-[#3b82f6]/10 text-[#3b82f6]">Core</span>
                     )}
                     {m.has_meshy && (
-                      <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-[#FF8000]/10 text-[#FF8000]">Pro</span>
+                      <span className="text-[11px] px-1.5 py-0.5 rounded-full bg-[#FF8000]/10 text-[#FF8000]">Pro</span>
                     )}
                     {m.has_pbr && (
-                      <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-green-500/10 text-green-400">PBR</span>
+                      <span className="text-[11px] px-1.5 py-0.5 rounded-full bg-green-500/10 text-green-400">PBR</span>
                     )}
                     {m.has_texture_paint && (
-                      <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-[#a855f7]/10 text-[#a855f7]">Paint</span>
+                      <span className="text-[11px] px-1.5 py-0.5 rounded-full bg-[#a855f7]/10 text-[#a855f7]">Paint</span>
                     )}
                   </div>
                 </div>
@@ -510,7 +510,7 @@ export function ModelGen3D() {
                   {m.has_hunyuan && (
                     <button
                       onClick={() => { setViewingModel(m.model_name); setViewingProvider('hunyuan'); }}
-                      className="flex items-center gap-1 px-2 py-1 rounded text-[9px] bg-[#3b82f6]/10 text-[#3b82f6] hover:bg-[#3b82f6]/20 transition-all"
+                      className="flex items-center gap-1 px-2 py-1 rounded text-[11px] bg-[#3b82f6]/10 text-[#3b82f6] hover:bg-[#3b82f6]/20 transition-all"
                     >
                       <Eye className="w-2.5 h-2.5" /> View
                     </button>
@@ -518,7 +518,7 @@ export function ModelGen3D() {
                   {m.has_meshy && (
                     <button
                       onClick={() => { setViewingModel(m.model_name); setViewingProvider('meshy'); }}
-                      className="flex items-center gap-1 px-2 py-1 rounded text-[9px] bg-[#FF8000]/10 text-[#FF8000] hover:bg-[#FF8000]/20 transition-all"
+                      className="flex items-center gap-1 px-2 py-1 rounded text-[11px] bg-[#FF8000]/10 text-[#FF8000] hover:bg-[#FF8000]/20 transition-all"
                     >
                       <Eye className="w-2.5 h-2.5" /> Pro
                     </button>
@@ -526,7 +526,7 @@ export function ModelGen3D() {
                   {m.has_texture_paint && (
                     <button
                       onClick={() => { setViewingModel(m.model_name); setViewingProvider('texture_paint'); }}
-                      className="flex items-center gap-1 px-2 py-1 rounded text-[9px] bg-[#a855f7]/10 text-[#a855f7] hover:bg-[#a855f7]/20 transition-all"
+                      className="flex items-center gap-1 px-2 py-1 rounded text-[11px] bg-[#a855f7]/10 text-[#a855f7] hover:bg-[#a855f7]/20 transition-all"
                     >
                       <Eye className="w-2.5 h-2.5" /> Paint
                     </button>
@@ -534,7 +534,7 @@ export function ModelGen3D() {
                   {m.has_hunyuan && !m.has_pbr && (
                     <button
                       onClick={() => handleApplyPbr(m.model_name, materialPreset)}
-                      className="flex items-center gap-1 px-2 py-1 rounded text-[9px] bg-green-500/10 text-green-400 hover:bg-green-500/20 transition-all"
+                      className="flex items-center gap-1 px-2 py-1 rounded text-[11px] bg-green-500/10 text-green-400 hover:bg-green-500/20 transition-all"
                     >
                       <Paintbrush className="w-2.5 h-2.5" /> +PBR
                     </button>
@@ -542,14 +542,14 @@ export function ModelGen3D() {
                   {!m.has_meshy && (
                     <button
                       onClick={() => handleRegenMeshy(m.model_name)}
-                      className="flex items-center gap-1 px-2 py-1 rounded text-[9px] bg-[#FF8000]/10 text-[#FF8000] hover:bg-[#FF8000]/20 transition-all"
+                      className="flex items-center gap-1 px-2 py-1 rounded text-[11px] bg-[#FF8000]/10 text-[#FF8000] hover:bg-[#FF8000]/20 transition-all"
                     >
                       <RefreshCw className="w-2.5 h-2.5" /> +Pro
                     </button>
                   )}
                   <button
                     onClick={() => handleViewQuality(m.model_name)}
-                    className="flex items-center gap-1 px-2 py-1 rounded text-[9px] bg-[#1a1a2e] text-muted-foreground hover:text-foreground transition-all"
+                    className="flex items-center gap-1 px-2 py-1 rounded text-[11px] bg-[#222838] text-muted-foreground hover:text-foreground transition-all"
                   >
                     <Layers className="w-2.5 h-2.5" /> Quality
                   </button>
@@ -562,18 +562,18 @@ export function ModelGen3D() {
 
       {/* Mesh Quality Panel */}
       {quality && (
-        <div className="bg-[#12121e] rounded-xl border border-[rgba(255,128,0,0.08)] p-4">
+        <div className="bg-[#1A1F2E] rounded-xl border border-[rgba(255,128,0,0.12)] p-4">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-xs font-medium text-foreground">
+            <h3 className="text-sm font-medium text-foreground">
               Mesh Quality — {quality.model_name}
             </h3>
-            <button onClick={() => setQuality(null)} className="text-[10px] text-muted-foreground hover:text-foreground">Close</button>
+            <button onClick={() => setQuality(null)} className="text-[12px] text-muted-foreground hover:text-foreground">Close</button>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {quality.generated.map((g) => (
-              <div key={g.file} className="bg-[#0a0a12] rounded-lg p-3 border border-[rgba(255,128,0,0.06)]">
-                <div className="text-[10px] font-mono text-foreground mb-2">{g.file}</div>
-                <div className="space-y-1 text-[10px]">
+              <div key={g.file} className="bg-[#0D1117] rounded-lg p-3 border border-[rgba(255,128,0,0.12)]">
+                <div className="text-[12px] font-mono text-foreground mb-2">{g.file}</div>
+                <div className="space-y-1 text-[12px]">
                   {g.vertices != null && (
                     <div className="flex justify-between"><span className="text-muted-foreground">Vertices</span><span className="text-foreground">{g.vertices.toLocaleString()}</span></div>
                   )}

@@ -1,47 +1,18 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getDb, DRIVER_NUMBERS, buildSessionMap, resolveSk } from '../_db.js';
+import { getDb } from '../_db.js';
 
-export default async function handler(_req: VercelRequest, res: VercelResponse) {
+export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const db = await getDb();
-    const sources: string[] = await db.collection('telemetry').distinct('_source_file');
-    const { yearRaceToKey } = buildSessionMap(sources);
-
-    const results = await db.collection('telemetry').aggregate([
-      { $match: { Compound: { $ne: null } } },
-      { $group: {
-        _id: { Driver: '$Driver', Year: '$Year', Race: '$Race', Compound: '$Compound' },
-        min_lap: { $min: '$LapNumber' },
-      }},
-      { $sort: { '_id.Race': 1, '_id.Driver': 1, min_lap: 1 } },
-    ]).toArray();
-
-    const driverRaceStints: Record<string, { driver: string; year: string; race: string; minLap: number }[]> = {};
-    for (const r of results) {
-      const { Driver: driver, Year: year, Race: race } = r._id;
-      const key = `${year}_${driver}_${race}`;
-      (driverRaceStints[key] ??= []).push({
-        driver: driver ?? '', year: year ?? '', race: race ?? '',
-        minLap: r.min_lap ?? 0,
-      });
+    const filter: Record<string, any> = {};
+    for (const [k, v] of Object.entries(req.query)) {
+      if (typeof v !== 'string') continue;
+      const num = Number(v);
+      filter[k] = !isNaN(num) && v.trim() !== '' ? num : v;
     }
-
-    const pits: any[] = [];
-    for (const stints of Object.values(driverRaceStints)) {
-      stints.sort((a, b) => a.minLap - b.minLap);
-      for (let i = 1; i < stints.length; i++) {
-        const s = stints[i];
-        const sk = resolveSk(yearRaceToKey, s.year, s.race);
-        pits.push({
-          session_key: sk, meeting_key: sk,
-          driver_number: DRIVER_NUMBERS[s.driver] ?? 0,
-          date: '', lap_number: s.minLap, pit_duration: 23.5,
-        });
-      }
-    }
-
-    res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=600');
-    return res.json(pits);
+    const docs = await db.collection('openf1_pit').find(filter, { projection: { _id: 0 } }).toArray();
+    res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=120');
+    return res.json(docs);
   } catch (e: any) {
     return res.status(500).json({ error: e.message });
   }

@@ -108,7 +108,7 @@ export function AIInsights() {
   return (
     <div className="space-y-4">
       {/* Pipeline Stats Bar */}
-      <div className="bg-[#12121e] border border-[rgba(255,128,0,0.12)] rounded-xl p-4">
+      <div className="bg-[#1A1F2E] border border-[rgba(255,128,0,0.12)] rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.3)] p-4">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-[#FF8000]/10 flex items-center justify-center">
@@ -116,12 +116,12 @@ export function AIInsights() {
             </div>
             <div>
               <h3 className="text-sm text-foreground">PDF Extraction Intelligence</h3>
-              <div className="text-[10px] text-muted-foreground">
+              <div className="text-[12px] text-muted-foreground">
                 Groq Llama 4 Maverick | {data.documents.length} document{data.documents.length !== 1 ? 's' : ''} | 3-pass extraction
               </div>
             </div>
           </div>
-          <span className="flex items-center gap-1.5 text-[10px] text-green-400 bg-green-500/10 px-2 py-1 rounded-full">
+          <span className="flex items-center gap-1.5 text-[12px] text-green-400 bg-green-500/10 px-2 py-1 rounded-full">
             <span className="w-1.5 h-1.5 rounded-full bg-green-400" />
             Extracted
           </span>
@@ -135,10 +135,10 @@ export function AIInsights() {
             { label: 'API Cost', value: `$${s.total_cost_usd.toFixed(2)}`, icon: <DollarSign className="w-3 h-3 text-purple-400" /> },
             { label: 'Tokens Used', value: `${((s.total_tokens_in + s.total_tokens_out) / 1_000_000).toFixed(1)}M`, icon: <Cpu className="w-3 h-3 text-red-400" /> },
           ].map((stat) => (
-            <div key={stat.label} className="bg-[#0a0a12] rounded-lg p-2">
+            <div key={stat.label} className="bg-[#0D1117] rounded-lg p-2">
               <div className="flex items-center gap-1.5 mb-1">
                 {stat.icon}
-                <span className="text-[9px] text-muted-foreground tracking-wider">{stat.label}</span>
+                <span className="text-[11px] text-muted-foreground tracking-wider">{stat.label}</span>
               </div>
               <div className="text-sm font-mono text-foreground">{stat.value}</div>
             </div>
@@ -148,9 +148,9 @@ export function AIInsights() {
 
       {/* Upload Section */}
       <div>
-        <h3 className="text-xs text-muted-foreground tracking-widest mb-2">UPLOAD DOCUMENTS</h3>
+        <h3 className="text-sm text-muted-foreground tracking-widest mb-2">UPLOAD DOCUMENTS</h3>
         <div
-          className={`bg-[#12121e] border-2 border-dashed rounded-xl p-6 transition-colors ${
+          className={`bg-[#1A1F2E] border-2 border-dashed rounded-xl p-6 transition-colors ${
             dragging
               ? 'border-[#FF8000] bg-[#FF8000]/5'
               : 'border-[rgba(255,128,0,0.2)] hover:border-[rgba(255,128,0,0.4)]'
@@ -175,7 +175,7 @@ export function AIInsights() {
                   browse
                 </button>
               </p>
-              <p className="text-[10px] text-muted-foreground mt-1">
+              <p className="text-[12px] text-muted-foreground mt-1">
                 PDF, DOCX, TXT, CSV, JSON, MD — ingested into RAG knowledge base
               </p>
             </div>
@@ -202,7 +202,7 @@ export function AIInsights() {
             {uploads.map((u, i) => (
               <div
                 key={`${u.name}-${i}`}
-                className="flex items-center gap-3 bg-[#12121e] border border-[rgba(255,128,0,0.08)] rounded-lg px-4 py-2.5"
+                className="flex items-center gap-3 bg-[#1A1F2E] border border-[rgba(255,128,0,0.12)] rounded-lg px-4 py-2.5"
               >
                 {u.status === 'uploading' && <Loader2 className="w-3.5 h-3.5 text-[#FF8000] animate-spin shrink-0" />}
                 {u.status === 'done' && <CheckCircle2 className="w-3.5 h-3.5 text-green-400 shrink-0" />}
@@ -210,15 +210,15 @@ export function AIInsights() {
                 <div className="flex-1 min-w-0">
                   <div className="text-[11px] text-foreground truncate">{u.name}</div>
                   {u.status === 'done' && (
-                    <div className="text-[10px] text-muted-foreground">
+                    <div className="text-[12px] text-muted-foreground">
                       {u.chunks} chunks embedded ({((u.textLength || 0) / 1000).toFixed(1)}K chars)
                     </div>
                   )}
                   {u.status === 'error' && (
-                    <div className="text-[10px] text-red-400">{u.error}</div>
+                    <div className="text-[12px] text-red-400">{u.error}</div>
                   )}
                   {u.status === 'uploading' && (
-                    <div className="text-[10px] text-muted-foreground">Processing & embedding...</div>
+                    <div className="text-[12px] text-muted-foreground">Processing & embedding...</div>
                   )}
                 </div>
                 {u.status === 'done' && (
@@ -235,7 +235,7 @@ export function AIInsights() {
         <div className="col-span-7 space-y-4">
           {/* Document Explorer */}
           <div className="space-y-2">
-            <h3 className="text-xs text-muted-foreground tracking-widest">DOCUMENTS</h3>
+            <h3 className="text-sm text-muted-foreground tracking-widest">DOCUMENTS</h3>
             {data.documents.map((doc) => (
               <DocumentCard
                 key={doc.name}
@@ -252,21 +252,21 @@ export function AIInsights() {
 
           {/* Regulation Categories */}
           <div>
-            <h3 className="text-xs text-muted-foreground tracking-widest mb-2">REGULATION CATEGORIES</h3>
-            <div className="bg-[#12121e] border border-[rgba(255,128,0,0.08)] rounded-xl p-4">
+            <h3 className="text-sm text-muted-foreground tracking-widest mb-2">REGULATION CATEGORIES</h3>
+            <div className="bg-[#1A1F2E] border border-[rgba(255,128,0,0.12)] rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.3)] p-4">
               <div className="space-y-2">
                 {categoryBreakdown.map(([cat, count]) => {
                   const pct = Math.round((count / s.total_rules) * 100);
                   return (
                     <div key={cat} className="flex items-center gap-3">
                       <span className="text-[11px] text-foreground w-48 truncate">{cat}</span>
-                      <div className="flex-1 h-1.5 bg-[#0a0a12] rounded-full overflow-hidden">
+                      <div className="flex-1 h-1.5 bg-[#0D1117] rounded-full overflow-hidden">
                         <div
                           className="h-full bg-[#FF8000] rounded-full"
                           style={{ width: `${pct}%` }}
                         />
                       </div>
-                      <span className="text-[10px] font-mono text-muted-foreground w-10 text-right">{count}</span>
+                      <span className="text-[12px] font-mono text-muted-foreground w-10 text-right">{count}</span>
                     </div>
                   );
                 })}
@@ -279,8 +279,8 @@ export function AIInsights() {
         <div className="col-span-5 space-y-4">
           {/* Equipment Types */}
           <div>
-            <h3 className="text-xs text-muted-foreground tracking-widest mb-2">EQUIPMENT TYPES</h3>
-            <div className="bg-[#12121e] border border-[rgba(255,128,0,0.08)] rounded-xl p-4 space-y-1.5">
+            <h3 className="text-sm text-muted-foreground tracking-widest mb-2">EQUIPMENT TYPES</h3>
+            <div className="bg-[#1A1F2E] border border-[rgba(255,128,0,0.12)] rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.3)] p-4 space-y-1.5">
               {equipmentTypes.map(([type, count]) => (
                 <div key={type} className="flex items-center justify-between text-[11px]">
                   <div className="flex items-center gap-2">
@@ -298,8 +298,8 @@ export function AIInsights() {
 
           {/* Dimensional Data Sample */}
           <div>
-            <h3 className="text-xs text-muted-foreground tracking-widest mb-2">DIMENSIONAL SPECS (sample)</h3>
-            <div className="bg-[#12121e] border border-[rgba(255,128,0,0.08)] rounded-xl p-4 space-y-2">
+            <h3 className="text-sm text-muted-foreground tracking-widest mb-2">DIMENSIONAL SPECS (sample)</h3>
+            <div className="bg-[#1A1F2E] border border-[rgba(255,128,0,0.12)] rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.3)] p-4 space-y-2">
               {data.dimensional_data.slice(0, 8).map((dim, i) => (
                 <div key={i} className="flex items-center justify-between text-[11px]">
                   <span className="text-foreground truncate max-w-[200px]">{dim.component}</span>
@@ -312,7 +312,7 @@ export function AIInsights() {
                 <div className="text-[11px] text-muted-foreground text-center py-2">No dimensional data</div>
               )}
               {data.dimensional_data.length > 8 && (
-                <div className="text-[10px] text-muted-foreground text-center pt-1">
+                <div className="text-[12px] text-muted-foreground text-center pt-1">
                   +{data.dimensional_data.length - 8} more
                 </div>
               )}
@@ -321,8 +321,8 @@ export function AIInsights() {
 
           {/* Material Specs */}
           <div>
-            <h3 className="text-xs text-muted-foreground tracking-widest mb-2">MATERIAL SPECS</h3>
-            <div className="bg-[#12121e] border border-[rgba(255,128,0,0.08)] rounded-xl p-4 space-y-2">
+            <h3 className="text-sm text-muted-foreground tracking-widest mb-2">MATERIAL SPECS</h3>
+            <div className="bg-[#1A1F2E] border border-[rgba(255,128,0,0.12)] rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.3)] p-4 space-y-2">
               {data.material_specs.slice(0, 6).map((mat, i) => (
                 <div key={i} className="text-[11px]">
                   <div className="flex items-center gap-2">
@@ -330,7 +330,7 @@ export function AIInsights() {
                     <span className="text-foreground">{mat.material || 'Unknown'}</span>
                   </div>
                   {mat.application && (
-                    <div className="text-[10px] text-muted-foreground ml-5 truncate">{mat.application}</div>
+                    <div className="text-[12px] text-muted-foreground ml-5 truncate">{mat.application}</div>
                   )}
                 </div>
               ))}
@@ -341,9 +341,9 @@ export function AIInsights() {
           </div>
 
           {/* Pipeline Architecture */}
-          <div className="bg-[#12121e] border border-[rgba(255,128,0,0.08)] rounded-xl p-4">
-            <h4 className="text-[10px] text-muted-foreground tracking-widest mb-3">EXTRACTION PIPELINE</h4>
-            <div className="space-y-2 text-[10px]">
+          <div className="bg-[#1A1F2E] border border-[rgba(255,128,0,0.12)] rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.3)] p-4">
+            <h4 className="text-[12px] text-muted-foreground tracking-widest mb-3">EXTRACTION PIPELINE</h4>
+            <div className="space-y-2 text-[12px]">
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-cyan-400" />
                 <span className="text-muted-foreground">Model:</span>
@@ -387,22 +387,22 @@ function DocumentCard({ doc, expanded, onToggle }: {
   const totalCost = doc.passes.reduce((s, p) => s + p.cost_usd, 0);
 
   return (
-    <div className="bg-[#12121e] border border-[rgba(255,128,0,0.08)] rounded-xl overflow-hidden">
+    <div className="bg-[#1A1F2E] border border-[rgba(255,128,0,0.12)] rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.3)] overflow-hidden">
       <button
         onClick={onToggle}
-        className="w-full flex items-center gap-3 p-4 text-left hover:bg-[#1a1a2e] transition-colors"
+        className="w-full flex items-center gap-3 p-4 text-left hover:bg-[#222838] transition-colors"
       >
         {expanded
           ? <ChevronDown className="w-4 h-4 text-[#FF8000] shrink-0" />
           : <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
         }
         <div className="flex-1 min-w-0">
-          <div className="text-xs text-foreground truncate">{doc.title}</div>
-          <div className="text-[10px] text-muted-foreground">
+          <div className="text-sm text-foreground truncate">{doc.title}</div>
+          <div className="text-[12px] text-muted-foreground">
             {doc.document_type} {doc.revision && `| ${doc.revision}`} {doc.date && `| ${doc.date}`}
           </div>
         </div>
-        <div className="flex items-center gap-4 text-[10px] shrink-0">
+        <div className="flex items-center gap-4 text-[12px] shrink-0">
           <span className="font-mono text-muted-foreground">{doc.total_pages} pages</span>
           <span className="font-mono text-[#FF8000]">{totalItems} items</span>
           <span className="font-mono text-muted-foreground">${totalCost.toFixed(2)}</span>
@@ -410,10 +410,10 @@ function DocumentCard({ doc, expanded, onToggle }: {
       </button>
 
       {expanded && (
-        <div className="px-4 pb-4 space-y-3 border-t border-[rgba(255,128,0,0.06)]">
+        <div className="px-4 pb-4 space-y-3 border-t border-[rgba(255,128,0,0.12)]">
           {/* Passes */}
           <div className="pt-3">
-            <div className="text-[9px] text-muted-foreground tracking-widest mb-2">EXTRACTION PASSES</div>
+            <div className="text-[11px] text-muted-foreground tracking-widest mb-2">EXTRACTION PASSES</div>
             <div className="space-y-1.5">
               {doc.passes.map((p) => (
                 <div key={p.number} className="flex items-center gap-3 text-[11px]">
@@ -430,17 +430,17 @@ function DocumentCard({ doc, expanded, onToggle }: {
           {/* Sections */}
           {doc.sections && doc.sections.length > 0 && (
             <div>
-              <div className="text-[9px] text-muted-foreground tracking-widest mb-2">TABLE OF CONTENTS</div>
+              <div className="text-[11px] text-muted-foreground tracking-widest mb-2">TABLE OF CONTENTS</div>
               <div className="grid grid-cols-2 gap-1">
                 {doc.sections.slice(0, 20).map((s, i) => (
-                  <div key={i} className="text-[10px] flex items-center gap-1.5">
+                  <div key={i} className="text-[12px] flex items-center gap-1.5">
                     <span className="text-[#FF8000] font-mono">{s.number}</span>
                     <span className="text-foreground truncate">{s.title}</span>
                   </div>
                 ))}
               </div>
               {doc.sections.length > 20 && (
-                <div className="text-[10px] text-muted-foreground mt-1">+{doc.sections.length - 20} more</div>
+                <div className="text-[12px] text-muted-foreground mt-1">+{doc.sections.length - 20} more</div>
               )}
             </div>
           )}
@@ -448,10 +448,10 @@ function DocumentCard({ doc, expanded, onToggle }: {
           {/* Standards */}
           {doc.standards && doc.standards.length > 0 && (
             <div>
-              <div className="text-[9px] text-muted-foreground tracking-widest mb-1">STANDARDS REFERENCED</div>
+              <div className="text-[11px] text-muted-foreground tracking-widest mb-1">STANDARDS REFERENCED</div>
               <div className="flex flex-wrap gap-1">
                 {doc.standards.slice(0, 15).map((std) => (
-                  <span key={std} className="text-[9px] px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-400">
+                  <span key={std} className="text-[11px] px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-400">
                     {std}
                   </span>
                 ))}

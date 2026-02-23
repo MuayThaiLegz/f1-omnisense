@@ -19,7 +19,7 @@ import { getCircuitByShortName } from '../data/circuits';
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload?.length) {
     return (
-      <div className="bg-[#0a0a12] border border-[rgba(255,128,0,0.2)] rounded-lg p-2 text-[10px]">
+      <div className="bg-[#0D1117] border border-[rgba(255,128,0,0.2)] rounded-lg p-2 text-[12px]">
         <div className="text-muted-foreground mb-1">{label}</div>
         {payload.map((entry: any, index: number) => (
           <div key={index} className="flex items-center gap-2">
@@ -481,6 +481,55 @@ export function LiveDashboard() {
   // Latest race control events (last 3 for ticker)
   const latestEvents = useMemo(() => filteredRaceControl.slice(-3).reverse(), [filteredRaceControl]);
 
+  // Head-to-head comparison (top 2 drivers)
+  const headToHead = useMemo(() => {
+    if (!activePositions || activePositions.length < 2 || !activeLaps) return null;
+    const d1 = activePositions[0];
+    const d2 = activePositions[1];
+    const drv1 = driverMap.get(d1.driver_number);
+    const drv2 = driverMap.get(d2.driver_number);
+    if (!drv1 || !drv2) return null;
+
+    let bestLap1 = Infinity, bestLap2 = Infinity;
+    let bestS1_1 = Infinity, bestS2_1 = Infinity, bestS3_1 = Infinity;
+    let bestS1_2 = Infinity, bestS2_2 = Infinity, bestS3_2 = Infinity;
+    let topSpeed1 = 0, topSpeed2 = 0;
+
+    for (const l of activeLaps) {
+      if (l.driver_number === d1.driver_number) {
+        if (l.lap_duration && l.lap_duration < bestLap1) bestLap1 = l.lap_duration;
+        if (l.duration_sector_1 && l.duration_sector_1 < bestS1_1) bestS1_1 = l.duration_sector_1;
+        if (l.duration_sector_2 && l.duration_sector_2 < bestS2_1) bestS2_1 = l.duration_sector_2;
+        if (l.duration_sector_3 && l.duration_sector_3 < bestS3_1) bestS3_1 = l.duration_sector_3;
+        if (l.st_speed && l.st_speed > topSpeed1) topSpeed1 = l.st_speed;
+      } else if (l.driver_number === d2.driver_number) {
+        if (l.lap_duration && l.lap_duration < bestLap2) bestLap2 = l.lap_duration;
+        if (l.duration_sector_1 && l.duration_sector_1 < bestS1_2) bestS1_2 = l.duration_sector_1;
+        if (l.duration_sector_2 && l.duration_sector_2 < bestS2_2) bestS2_2 = l.duration_sector_2;
+        if (l.duration_sector_3 && l.duration_sector_3 < bestS3_2) bestS3_2 = l.duration_sector_3;
+        if (l.st_speed && l.st_speed > topSpeed2) topSpeed2 = l.st_speed;
+      }
+    }
+
+    const pits1 = (activePitStops ?? []).filter(p => p.driver_number === d1.driver_number).length;
+    const pits2 = (activePitStops ?? []).filter(p => p.driver_number === d2.driver_number).length;
+
+    return {
+      d1: { code: drv1.name_acronym, color: `#${drv1.team_colour}`, pos: d1.position,
+             bestLap: bestLap1 === Infinity ? null : bestLap1,
+             bestS1: bestS1_1 === Infinity ? null : bestS1_1,
+             bestS2: bestS2_1 === Infinity ? null : bestS2_1,
+             bestS3: bestS3_1 === Infinity ? null : bestS3_1,
+             topSpeed: topSpeed1 || null, pits: pits1 },
+      d2: { code: drv2.name_acronym, color: `#${drv2.team_colour}`, pos: d2.position,
+             bestLap: bestLap2 === Infinity ? null : bestLap2,
+             bestS1: bestS1_2 === Infinity ? null : bestS1_2,
+             bestS2: bestS2_2 === Infinity ? null : bestS2_2,
+             bestS3: bestS3_2 === Infinity ? null : bestS3_2,
+             topSpeed: topSpeed2 || null, pits: pits2 },
+    };
+  }, [activePositions, activeLaps, driverMap, activePitStops]);
+
   // Scrub bar markers
   const flagMarkers = useMemo(() => {
     if (!raceControl || sessionDuration <= 0) return [];
@@ -575,15 +624,15 @@ export function LiveDashboard() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-6">
           <div>
-            <div className="text-[10px] text-muted-foreground tracking-widest">{selectedSession.session_type}</div>
+            <div className="text-[12px] text-muted-foreground tracking-widest">{selectedSession.session_type}</div>
             <div className="text-[#FF8000] text-sm">{selectedSession.circuit_short_name} — {selectedSession.session_name}</div>
           </div>
-          <div className="flex items-center gap-4 text-xs">
-            <div className="bg-[#1a1a2e] rounded-lg px-3 py-1.5 font-mono flex items-center gap-1.5">
+          <div className="flex items-center gap-4 text-sm">
+            <div className="bg-[#222838] rounded-lg px-3 py-1.5 font-mono flex items-center gap-1.5">
               <MapPin className="w-3 h-3 text-[#FF8000]" />
               <span className="text-foreground">{selectedSession.circuit_short_name}</span>
             </div>
-            <div className="bg-[#1a1a2e] rounded-lg px-3 py-1.5 font-mono flex items-center gap-1.5">
+            <div className="bg-[#222838] rounded-lg px-3 py-1.5 font-mono flex items-center gap-1.5">
               <Flag className="w-3 h-3 text-muted-foreground" />
               <span className="text-foreground">{selectedSession.country_name}</span>
             </div>
@@ -594,7 +643,7 @@ export function LiveDashboard() {
                 if (s) setSelectedSession(s);
               }}
               aria-label="Select session"
-              className="appearance-none bg-[#1a1a2e] border border-[rgba(255,128,0,0.12)] rounded-lg px-3 py-1.5 text-xs text-foreground focus:outline-none cursor-pointer"
+              className="appearance-none bg-[#222838] border border-[rgba(255,128,0,0.12)] rounded-lg px-3 py-1.5 text-sm text-foreground focus:outline-none cursor-pointer"
             >
               {sessions
                 ?.filter(s => new Date(s.date_start).getTime() < Date.now())
@@ -609,7 +658,7 @@ export function LiveDashboard() {
           </div>
         </div>
         {latestWeather && (
-          <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
+          <div className="flex items-center gap-3 text-[12px] text-muted-foreground">
             <div className="flex items-center gap-1">
               <Cloud className="w-3 h-3" />
               Track {latestWeather.track_temperature}°C
@@ -625,11 +674,11 @@ export function LiveDashboard() {
       </div>
 
       {/* Replay Control Bar */}
-      <div className="bg-[#12121e] border border-[rgba(255,128,0,0.12)] rounded-xl p-3">
+      <div className="bg-[#222838] border border-[rgba(255,128,0,0.20)] border-t-[#FF8000]/40 rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.3)] p-3">
         <div className="flex items-center gap-4">
           <button
             onClick={toggleReplay}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-mono transition-colors ${
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-mono transition-colors ${
               replayActive
                 ? 'bg-[#FF8000]/15 text-[#FF8000] border border-[#FF8000]/30'
                 : 'bg-green-500/10 text-green-400 border border-green-500/20 hover:bg-green-500/20'
@@ -653,10 +702,10 @@ export function LiveDashboard() {
                   <button
                     key={sp}
                     onClick={() => setReplaySpeed(sp)}
-                    className={`px-2 py-1 rounded text-[10px] font-mono transition-colors ${
+                    className={`px-2 py-1 rounded text-[12px] font-mono transition-colors ${
                       replaySpeed === sp
-                        ? 'bg-[#FF8000] text-[#0a0a12]'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-[#1a1a2e]'
+                        ? 'bg-[#FF8000] text-[#0D1117]'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-[#222838]'
                     }`}
                   >
                     {sp}x
@@ -668,7 +717,7 @@ export function LiveDashboard() {
               <div className="flex-1 flex items-center gap-3">
                 <div
                   ref={scrubRef}
-                  className="flex-1 h-3 bg-[#1a1a2e] rounded-full relative cursor-pointer select-none"
+                  className="flex-1 h-3 bg-[#222838] rounded-full relative cursor-pointer select-none"
                   onPointerDown={onScrubDown}
                 >
                   {/* Filled track */}
@@ -694,7 +743,7 @@ export function LiveDashboard() {
                   ))}
                   {/* Thumb */}
                   <motion.div
-                    className="absolute top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-[#FF8000] shadow-[0_0_8px_rgba(255,128,0,0.5)] border-2 border-[#0a0a12]"
+                    className="absolute top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-[#FF8000] shadow-[0_0_8px_rgba(255,128,0,0.5)] border-2 border-[#0D1117]"
                     style={{ left: `calc(${scrubPct}% - 8px)` }}
                     transition={{ type: 'spring', stiffness: 400, damping: 30 }}
                   />
@@ -702,10 +751,10 @@ export function LiveDashboard() {
               </div>
 
               <div className="text-right shrink-0">
-                <div className="text-xs font-mono text-foreground">
+                <div className="text-sm font-mono text-foreground">
                   {formatElapsed(replayTime)} / {formatElapsed(sessionDuration)}
                 </div>
-                <div className="text-[10px] text-muted-foreground">
+                <div className="text-[12px] text-muted-foreground">
                   L{currentMaxLap}{totalLaps > 0 ? ` / L${totalLaps}` : ''}
                 </div>
               </div>
@@ -713,14 +762,14 @@ export function LiveDashboard() {
           )}
 
           {!replayActive && (
-            <div className="flex-1 text-[10px] text-muted-foreground">
+            <div className="flex-1 text-[12px] text-muted-foreground">
               Switch to <span className="text-[#FF8000]">REPLAY</span> to stream historical race data
             </div>
           )}
 
           <button
             onClick={() => setShowDebug(d => !d)}
-            className={`p-1.5 rounded-lg transition-colors ${showDebug ? 'bg-amber-500/20 text-amber-400' : 'text-muted-foreground hover:text-foreground hover:bg-[#1a1a2e]'}`}
+            className={`p-1.5 rounded-lg transition-colors ${showDebug ? 'bg-amber-500/20 text-amber-400' : 'text-muted-foreground hover:text-foreground hover:bg-[#222838]'}`}
             title="Toggle debug info"
           >
             <Bug className="w-3.5 h-3.5" />
@@ -729,9 +778,9 @@ export function LiveDashboard() {
 
         {/* Race control ticker */}
         {replayActive && latestEvents.length > 0 && (
-          <div className="flex items-center gap-4 mt-2 pt-2 border-t border-[rgba(255,128,0,0.06)]">
+          <div className="flex items-center gap-4 mt-2 pt-2 border-t border-[rgba(255,128,0,0.12)]">
             {latestEvents.map((ev, i) => (
-              <div key={`${ev.date}-${i}`} className={`flex items-center gap-1.5 text-[10px] ${flagColor(ev.flag, ev.category)}`}>
+              <div key={`${ev.date}-${i}`} className={`flex items-center gap-1.5 text-[12px] ${flagColor(ev.flag, ev.category)}`}>
                 <span className="w-1.5 h-1.5 rounded-full bg-current shrink-0" />
                 <span className="truncate max-w-[300px]">{ev.message}</span>
               </div>
@@ -742,7 +791,7 @@ export function LiveDashboard() {
 
       {/* Debug Panel */}
       {showDebug && (
-        <div className="bg-[#0a0a12] border border-amber-500/30 rounded-xl p-3 text-[10px] font-mono space-y-1">
+        <div className="bg-[#0D1117] border border-amber-500/30 rounded-xl p-3 text-[12px] font-mono space-y-1">
           <div className="text-amber-400 font-semibold mb-1">DEBUG — Data Pipeline</div>
           <div className="text-muted-foreground">
             Session: <span className="text-foreground">{sessionKey}</span> |
@@ -769,8 +818,8 @@ export function LiveDashboard() {
       {(() => {
         const circuit = selectedSession ? getCircuitByShortName(selectedSession.circuit_short_name) : undefined;
         if (!circuit) return (
-          <div className="bg-[#12121e] rounded-xl border border-[rgba(255,128,0,0.08)] p-6 text-center">
-            <div className="text-amber-400 text-xs">No track map for circuit: "{selectedSession?.circuit_short_name}"</div>
+          <div className="bg-[#1A1F2E] rounded-xl border border-[rgba(255,128,0,0.12)] p-6 text-center">
+            <div className="text-amber-400 text-sm">No track map for circuit: "{selectedSession?.circuit_short_name}"</div>
           </div>
         );
         return (
@@ -791,8 +840,8 @@ export function LiveDashboard() {
                 cars={replayActive && carTrackPositions.length > 0 ? carTrackPositions : undefined}
               />
             </div>
-            {/* Right: Streaming Analytics Sidebar */}
-            <div className="col-span-5">
+            {/* Right: Analytics Sidebar + Head-to-Head */}
+            <div className="col-span-5 flex flex-col gap-4">
               <LiveAnalyticsSidebar
                 positions={activePositions}
                 sectorTimesData={sectorTimesData}
@@ -806,12 +855,55 @@ export function LiveDashboard() {
                 currentMaxLap={currentMaxLap}
                 replayActive={replayActive}
                 replayTime={replayTime}
-                height={550}
+                height={headToHead ? 360 : 550}
               />
+              {headToHead && (
+                <div className="bg-[#1A1F2E] border border-[rgba(255,128,0,0.20)] border-t-2 border-t-[#FF8000] rounded-xl shadow-[0_4px_12px_rgba(0,0,0,0.4)] p-3">
+                  <h3 className="text-[11px] text-[#FF8000] tracking-widest mb-2 font-semibold">HEAD TO HEAD</h3>
+                  <div className="grid grid-cols-[1fr_auto_1fr] gap-3 items-center">
+                    <div className="text-right">
+                      <div className="text-base font-bold font-mono" style={{ color: headToHead.d1.color }}>{headToHead.d1.code}</div>
+                      <div className="text-[11px] text-muted-foreground">P{headToHead.d1.pos}</div>
+                    </div>
+                    <div className="text-[11px] text-muted-foreground text-center">VS</div>
+                    <div className="text-left">
+                      <div className="text-base font-bold font-mono" style={{ color: headToHead.d2.color }}>{headToHead.d2.code}</div>
+                      <div className="text-[11px] text-muted-foreground">P{headToHead.d2.pos}</div>
+                    </div>
+                  </div>
+                  <div className="mt-2 space-y-0.5">
+                    {[
+                      { label: 'BEST LAP', v1: headToHead.d1.bestLap, v2: headToHead.d2.bestLap, fmt: (v: number | null) => v ? `${v.toFixed(3)}s` : '—', lower: true },
+                      { label: 'S1', v1: headToHead.d1.bestS1, v2: headToHead.d2.bestS1, fmt: (v: number | null) => v ? `${v.toFixed(3)}` : '—', lower: true },
+                      { label: 'S2', v1: headToHead.d1.bestS2, v2: headToHead.d2.bestS2, fmt: (v: number | null) => v ? `${v.toFixed(3)}` : '—', lower: true },
+                      { label: 'S3', v1: headToHead.d1.bestS3, v2: headToHead.d2.bestS3, fmt: (v: number | null) => v ? `${v.toFixed(3)}` : '—', lower: true },
+                      { label: 'TOP SPD', v1: headToHead.d1.topSpeed, v2: headToHead.d2.topSpeed, fmt: (v: number | null) => v ? `${v}` : '—', lower: false },
+                      { label: 'PITS', v1: headToHead.d1.pits, v2: headToHead.d2.pits, fmt: (v: number | null) => v !== null ? `${v}` : '—', lower: null },
+                    ].map(({ label, v1, v2, fmt, lower }) => {
+                      const win1 = v1 !== null && v2 !== null && lower !== null ? (lower ? v1 < v2 : v1 > v2) : false;
+                      const win2 = v1 !== null && v2 !== null && lower !== null ? (lower ? v2 < v1 : v2 > v1) : false;
+                      return (
+                        <div key={label} className="grid grid-cols-[1fr_auto_1fr] gap-3 items-center">
+                          <div className={`text-right text-[11px] font-mono ${win1 ? 'text-green-400' : 'text-foreground'}`}>{fmt(v1)}</div>
+                          <div className="text-[10px] text-muted-foreground text-center w-14">{label}</div>
+                          <div className={`text-left text-[11px] font-mono ${win2 ? 'text-green-400' : 'text-foreground'}`}>{fmt(v2)}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         );
       })()}
+
+      {/* ── RACE OVERVIEW ── */}
+      <div className="flex items-center gap-2 mt-2">
+        <div className="h-px flex-1 bg-[rgba(255,128,0,0.10)]" />
+        <span className="text-[10px] tracking-[0.25em] text-[#FF8000]/60 font-semibold">RACE OVERVIEW</span>
+        <div className="h-px flex-1 bg-[rgba(255,128,0,0.10)]" />
+      </div>
 
       {/* KPI Cards */}
       <div className="grid grid-cols-4 gap-3">
@@ -851,9 +943,9 @@ export function LiveDashboard() {
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          className="col-span-5 bg-[#12121e] border border-[rgba(255,128,0,0.08)] rounded-xl p-4"
+          className="col-span-5 bg-[#1A1F2E] border border-[rgba(255,128,0,0.20)] rounded-xl shadow-[0_4px_12px_rgba(0,0,0,0.4)] p-4"
         >
-          <h3 className="text-xs text-muted-foreground tracking-widest mb-3">
+          <h3 className="text-sm text-foreground tracking-widest mb-3 font-medium">
             {replayActive ? 'MCLAREN POSITIONS' : 'LIVE POSITIONS'}
           </h3>
           <div className="space-y-1">
@@ -869,12 +961,12 @@ export function LiveDashboard() {
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ layout: { duration: 0.4, ease: 'easeInOut' } }}
-                    className="flex items-center gap-3 px-2 py-1.5 rounded-lg hover:bg-[#1a1a2e] transition-colors"
+                    className="flex items-center gap-3 px-2 py-1.5 rounded-lg hover:bg-[#222838] transition-colors"
                   >
-                    <span className="text-foreground font-mono text-xs w-6 text-right">P{pos.position}</span>
+                    <span className="text-foreground font-mono text-sm w-6 text-right">P{pos.position}</span>
                     <div className="w-1 h-5 rounded-full" style={{ backgroundColor: driver ? `#${driver.team_colour}` : '#555' }} />
-                    <span className="text-[#FF8000] font-mono text-xs w-6">{pos.driver_number}</span>
-                    <span className="text-foreground text-xs flex-1 truncate">
+                    <span className="text-[#FF8000] font-mono text-sm w-6">{pos.driver_number}</span>
+                    <span className="text-foreground text-sm flex-1 truncate">
                       {driver?.broadcast_name ?? `Driver ${pos.driver_number}`}
                     </span>
                     {/* Position delta */}
@@ -884,9 +976,9 @@ export function LiveDashboard() {
                     </span>
                     {/* Fastest lap badge */}
                     {hasFastestLap && (
-                      <span className="text-[9px] font-mono text-purple-400 bg-purple-400/10 px-1.5 rounded">FL</span>
+                      <span className="text-[11px] font-mono text-purple-400 bg-purple-400/10 px-1.5 rounded">FL</span>
                     )}
-                    <span className="text-[10px] text-muted-foreground truncate max-w-[80px]">
+                    <span className="text-[12px] text-muted-foreground truncate max-w-[80px]">
                       {driver?.team_name ?? ''}
                     </span>
                   </motion.div>
@@ -894,7 +986,7 @@ export function LiveDashboard() {
               })}
             </AnimatePresence>
             {(!activePositions || activePositions.length === 0) && (
-              <div className="text-center text-muted-foreground text-xs py-4">
+              <div className="text-center text-muted-foreground text-sm py-4">
                 {replayActive && replayTime === 0 ? 'Press play to start replay' : 'No position data — try a 2023–2025 Race session'}
               </div>
             )}
@@ -906,16 +998,16 @@ export function LiveDashboard() {
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.05 }}
-          className="col-span-7 bg-[#12121e] border border-[rgba(255,128,0,0.08)] rounded-xl p-4"
+          className="col-span-7 bg-[#1A1F2E] border border-[rgba(255,128,0,0.20)] rounded-xl shadow-[0_4px_12px_rgba(0,0,0,0.4)] p-4"
         >
           <div className="flex items-center justify-between mb-3">
             <div>
-              <h3 className="text-xs text-foreground">Lap Times</h3>
-              <p className="text-[10px] text-muted-foreground">
+              <h3 className="text-sm text-foreground">Lap Times</h3>
+              <p className="text-[12px] text-muted-foreground">
                 {replayActive ? `Replay — ${replaySpeed}x speed` : 'Real-time lap duration'}
               </p>
             </div>
-            <div className="flex items-center gap-3 text-[10px]">
+            <div className="flex items-center gap-3 text-[12px]">
               {activePositions?.slice(0, 5).map((pos, i) => {
                 const driver = driverMap.get(pos.driver_number);
                 return (
@@ -952,12 +1044,19 @@ export function LiveDashboard() {
                 </LineChart>
               </ResponsiveContainer>
             ) : (
-              <div className="flex items-center justify-center h-full text-muted-foreground text-xs">
+              <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
                 {replayActive && replayTime === 0 ? 'Press play to start replay' : activeLaps ? 'Processing lap data...' : 'Loading lap data...'}
               </div>
             )}
           </div>
         </motion.div>
+      </div>
+
+      {/* ── ANALYTICS ── */}
+      <div className="flex items-center gap-2 mt-2">
+        <div className="h-px flex-1 bg-[rgba(255,128,0,0.10)]" />
+        <span className="text-[10px] tracking-[0.25em] text-[#FF8000]/60 font-semibold">ANALYTICS</span>
+        <div className="h-px flex-1 bg-[rgba(255,128,0,0.10)]" />
       </div>
 
       {/* Row 2: Sector Times + Gap to Leader */}
@@ -967,16 +1066,16 @@ export function LiveDashboard() {
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="col-span-5 bg-[#12121e] border border-[rgba(255,128,0,0.08)] rounded-xl p-4"
+          className="col-span-5 bg-[#1A1F2E] border border-[rgba(255,128,0,0.20)] rounded-xl shadow-[0_4px_12px_rgba(0,0,0,0.4)] p-4"
         >
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-xs text-muted-foreground tracking-widest">SECTOR TIMES</h3>
-            <span className="text-[10px] text-muted-foreground font-mono">Lap {currentMaxLap}</span>
+            <h3 className="text-sm text-foreground tracking-widest font-medium">SECTOR TIMES</h3>
+            <span className="text-[12px] text-muted-foreground font-mono">Lap {currentMaxLap}</span>
           </div>
           {sectorTimesData.length > 0 ? (
             <div className="space-y-0.5">
               {/* Header */}
-              <div className="grid grid-cols-[60px_1fr_1fr_1fr_1fr] gap-1 text-[9px] text-muted-foreground pb-1 border-b border-[rgba(255,128,0,0.06)]">
+              <div className="grid grid-cols-[60px_1fr_1fr_1fr_1fr] gap-1 text-[11px] text-muted-foreground pb-1 border-b border-[rgba(255,128,0,0.12)]">
                 <span>Driver</span>
                 <span className="text-right">S1</span>
                 <span className="text-right">S2</span>
@@ -986,7 +1085,7 @@ export function LiveDashboard() {
               {sectorTimesData.map(row => {
                 const pb = sectorBests.personal.get(row.driver_number) ?? { s1: Infinity, s2: Infinity, s3: Infinity };
                 return (
-                  <div key={row.driver_number} className="grid grid-cols-[60px_1fr_1fr_1fr_1fr] gap-1 text-[10px] font-mono py-1 hover:bg-[#1a1a2e] rounded transition-colors">
+                  <div key={row.driver_number} className="grid grid-cols-[60px_1fr_1fr_1fr_1fr] gap-1 text-[12px] font-mono py-1 hover:bg-[#222838] rounded transition-colors">
                     <span className="flex items-center gap-1.5">
                       <span className="w-1 h-3 rounded-full" style={{ backgroundColor: `#${row.team_colour}` }} />
                       <span className="text-foreground">{row.acronym}</span>
@@ -1007,13 +1106,13 @@ export function LiveDashboard() {
                 );
               })}
               {/* Legend */}
-              <div className="flex items-center gap-4 pt-2 text-[9px]">
+              <div className="flex items-center gap-4 pt-2 text-[11px]">
                 <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-purple-400" /> Overall best</span>
                 <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-400" /> Personal best</span>
               </div>
             </div>
           ) : (
-            <div className="flex items-center justify-center h-[120px] text-muted-foreground text-xs">
+            <div className="flex items-center justify-center h-[120px] text-muted-foreground text-sm">
               {replayActive && replayTime === 0 ? 'Press play to start replay' : 'No sector data'}
             </div>
           )}
@@ -1024,12 +1123,12 @@ export function LiveDashboard() {
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15 }}
-          className="col-span-7 bg-[#12121e] border border-[rgba(255,128,0,0.08)] rounded-xl p-4"
+          className="col-span-7 bg-[#1A1F2E] border border-[rgba(255,128,0,0.20)] rounded-xl shadow-[0_4px_12px_rgba(0,0,0,0.4)] p-4"
         >
           <div className="flex items-center justify-between mb-3">
             <div>
-              <h3 className="text-xs text-foreground">Gap to Leader</h3>
-              <p className="text-[10px] text-muted-foreground">Interval in seconds per lap</p>
+              <h3 className="text-sm text-foreground font-medium">Gap to Leader</h3>
+              <p className="text-[12px] text-muted-foreground">Interval in seconds per lap</p>
             </div>
           </div>
           <div className="h-[220px]">
@@ -1049,7 +1148,7 @@ export function LiveDashboard() {
                 </LineChart>
               </ResponsiveContainer>
             ) : (
-              <div className="flex items-center justify-center h-full text-muted-foreground text-xs">
+              <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
                 {replayActive && replayTime === 0 ? 'Press play to start replay' : 'No interval data'}
               </div>
             )}
@@ -1062,11 +1161,11 @@ export function LiveDashboard() {
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="bg-[#12121e] border border-[rgba(255,128,0,0.08)] rounded-xl p-4"
+        className="bg-[#1A1F2E] border border-[rgba(255,128,0,0.20)] rounded-xl shadow-[0_4px_12px_rgba(0,0,0,0.4)] p-4"
       >
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-xs text-muted-foreground tracking-widest">TIRE STRATEGY</h3>
-          <div className="flex items-center gap-3 text-[9px]">
+          <h3 className="text-sm text-foreground tracking-widest font-medium">TIRE STRATEGY</h3>
+          <div className="flex items-center gap-3 text-[11px]">
             {Object.entries(COMPOUND_COLORS).map(([name, color]) => (
               <span key={name} className="flex items-center gap-1">
                 <span className="w-3 h-2 rounded-sm" style={{ backgroundColor: color, opacity: 0.8 }} />
@@ -1085,11 +1184,18 @@ export function LiveDashboard() {
             totalLaps={totalLaps || currentMaxLap}
           />
         ) : (
-          <div className="flex items-center justify-center h-[80px] text-muted-foreground text-xs">
+          <div className="flex items-center justify-center h-[80px] text-muted-foreground text-sm">
             {replayActive && replayTime === 0 ? 'Press play to start replay' : 'No stint data'}
           </div>
         )}
       </motion.div>
+
+      {/* ── REFERENCE ── */}
+      <div className="flex items-center gap-2 mt-2">
+        <div className="h-px flex-1 bg-[rgba(255,128,0,0.10)]" />
+        <span className="text-[10px] tracking-[0.25em] text-[#FF8000]/60 font-semibold">REFERENCE</span>
+        <div className="h-px flex-1 bg-[rgba(255,128,0,0.10)]" />
+      </div>
 
       {/* Row 4: Race Control Log + Weather */}
       <div className="grid grid-cols-12 gap-4">
@@ -1098,11 +1204,11 @@ export function LiveDashboard() {
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.25 }}
-          className="col-span-8 bg-[#12121e] border border-[rgba(255,128,0,0.08)] rounded-xl p-4"
+          className="col-span-8 bg-[#1A1F2E] border border-[rgba(255,128,0,0.12)] rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.3)] p-4"
         >
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-xs text-muted-foreground tracking-widest">RACE CONTROL</h3>
-            <span className="text-[10px] text-muted-foreground">{filteredRaceControl.length} events</span>
+            <h3 className="text-sm text-muted-foreground tracking-widest">RACE CONTROL</h3>
+            <span className="text-[12px] text-muted-foreground">{filteredRaceControl.length} events</span>
           </div>
           <ScrollArea className="h-[180px]">
             <div className="space-y-0.5 pr-3">
@@ -1113,7 +1219,7 @@ export function LiveDashboard() {
                     initial={{ opacity: 0, x: -8 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ duration: 0.2 }}
-                    className={`flex items-center gap-2 text-[10px] py-1 rounded px-1 hover:bg-[#1a1a2e] ${flagColor(ev.flag, ev.category)}`}
+                    className={`flex items-center gap-2 text-[12px] py-1 rounded px-1 hover:bg-[#222838] ${flagColor(ev.flag, ev.category)}`}
                   >
                     <span className="w-1.5 h-1.5 rounded-full bg-current shrink-0" />
                     {ev.lap_number != null && (
@@ -1123,7 +1229,7 @@ export function LiveDashboard() {
                   </motion.div>
                 ))
               ) : (
-                <div className="text-center text-muted-foreground text-xs py-4">No events</div>
+                <div className="text-center text-muted-foreground text-sm py-4">No events</div>
               )}
             </div>
           </ScrollArea>
@@ -1134,9 +1240,9 @@ export function LiveDashboard() {
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className="col-span-4 bg-[#12121e] border border-[rgba(255,128,0,0.08)] rounded-xl p-4"
+          className="col-span-4 bg-[#1A1F2E] border border-[rgba(255,128,0,0.12)] rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.3)] p-4"
         >
-          <h3 className="text-xs text-muted-foreground tracking-widest mb-3">WEATHER TREND</h3>
+          <h3 className="text-sm text-muted-foreground tracking-widest mb-3">WEATHER TREND</h3>
           {activeWeather && activeWeather.length > 0 ? (
             <div className="h-[130px]">
               <ResponsiveContainer width="100%" height="100%">
@@ -1155,12 +1261,12 @@ export function LiveDashboard() {
               </ResponsiveContainer>
             </div>
           ) : (
-            <div className="flex items-center justify-center h-[130px] text-muted-foreground text-xs">
+            <div className="flex items-center justify-center h-[130px] text-muted-foreground text-sm">
               No weather data
             </div>
           )}
           {latestWeather && (
-            <div className="grid grid-cols-2 gap-2 mt-2 text-[10px]">
+            <div className="grid grid-cols-2 gap-2 mt-2 text-[12px]">
               <div>
                 <span className="text-muted-foreground">Humidity: </span>
                 <span className="font-mono text-foreground">{latestWeather.humidity}%</span>
@@ -1183,10 +1289,10 @@ function AnimatedKPI({ icon, label, value, sub, color }: {
   icon: React.ReactNode; label: string; value: string; sub: string; color: string;
 }) {
   return (
-    <div className="bg-[#12121e] border border-[rgba(255,128,0,0.08)] rounded-xl p-3">
+    <div className="bg-[#1A1F2E] border border-[rgba(255,128,0,0.12)] border-t-2 border-t-[rgba(255,128,0,0.25)] rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.3)] p-4">
       <div className="flex items-center gap-2 mb-2">
         {icon}
-        <span className="text-[10px] text-muted-foreground tracking-widest">{label}</span>
+        <span className="text-[12px] text-muted-foreground tracking-widest uppercase">{label}</span>
       </div>
       <AnimatePresence mode="wait">
         <motion.div
@@ -1195,12 +1301,12 @@ function AnimatedKPI({ icon, label, value, sub, color }: {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -6 }}
           transition={{ duration: 0.15 }}
-          className={`text-xl font-mono ${color}`}
+          className={`text-2xl font-mono font-semibold ${color}`}
         >
           {value}
         </motion.div>
       </AnimatePresence>
-      <div className="text-[10px] text-muted-foreground mt-0.5">{sub}</div>
+      <div className="text-[12px] text-muted-foreground mt-1">{sub}</div>
     </div>
   );
 }

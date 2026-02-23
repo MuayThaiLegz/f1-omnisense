@@ -27,6 +27,7 @@ from pipeline.anomaly.ensemble import (
     AnomalyStatistics,
     severity_from_votes,
 )
+from pipeline.anomaly.classifier import ClassifierPipeline
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
@@ -138,14 +139,14 @@ def merge_telemetry(car_df: pd.DataFrame, bio_df: pd.DataFrame) -> pd.DataFrame:
     return merged.fillna(0)
 
 
-def run_ensemble_per_system(merged_df: pd.DataFrame) -> dict:
+def run_ensemble_per_system(merged_df: pd.DataFrame) -> tuple:
     """
     Run the anomaly ensemble on per-system feature groups.
-    Returns per-race, per-system anomaly results.
+    Returns (results_dict, system_col_map) for downstream classifier.
     """
     if merged_df.empty or len(merged_df) < 3:
         logger.warning("Not enough data for ensemble (need >= 3 races)")
-        return {}
+        return {}, {}
 
     ensemble = AnomalyDetectionEnsemble()
     stats = AnomalyStatistics()
@@ -195,7 +196,28 @@ def run_ensemble_per_system(merged_df: pd.DataFrame) -> dict:
         except Exception as e:
             logger.error(f"  {system} failed: {e}")
 
-    return results
+    return results, system_col_map
+
+
+def run_classifier_per_system(
+    merged_df: pd.DataFrame,
+    system_results: dict,
+    system_col_map: dict,
+    driver_code: str,
+) -> dict:
+    """Run severity classifier on each system's ensemble results."""
+    pipeline = ClassifierPipeline()
+    enriched = {}
+    for system, result_df in system_results.items():
+        feature_cols = system_col_map.get(system, [])
+        try:
+            enriched[system] = pipeline.train_and_predict_system(
+                merged_df, system, feature_cols, result_df, driver_code,
+            )
+        except Exception as e:
+            logger.warning(f"  Classifier failed for {system}: {e}")
+            enriched[system] = result_df
+    return enriched
 
 
 def compute_system_health(system_results: dict, merged_df: pd.DataFrame) -> list:
@@ -241,7 +263,7 @@ def compute_system_health(system_results: dict, merged_df: pd.DataFrame) -> list
                         if col.startswith(feat) and col.endswith("_mean"):
                             feature_vals[feat] = round(float(merged_df.iloc[i].get(col, 0)), 1)
 
-            race_data["systems"][system] = {
+            entry = {
                 "health": health,
                 "level": level,
                 "vote_severity": vote_severity,
@@ -252,6 +274,12 @@ def compute_system_health(system_results: dict, merged_df: pd.DataFrame) -> list
                 "top_model": top_model,
                 "features": feature_vals,
             }
+
+            # Enrich with classifier predictions if available
+            if "classifier_severity" in result_df.columns:
+                ClassifierPipeline.enrich_health_entry(entry, row)
+
+            race_data["systems"][system] = entry
 
         per_race.append(race_data)
 
@@ -274,7 +302,15 @@ def run_driver(driver_code: str) -> dict:
 
     logger.info(f"Loaded {len(merged)} races, {merged.shape[1]} features")
 
-    system_results = run_ensemble_per_system(merged)
+    system_results, system_col_map = run_ensemble_per_system(merged)
+
+    # Supervised classifier: train on ensemble pseudo-labels, produce
+    # calibrated severity probabilities for preventative maintenance
+    logger.info("Running severity classifier...")
+    system_results = run_classifier_per_system(
+        merged, system_results, system_col_map, driver_code,
+    )
+
     per_race_health = compute_system_health(system_results, merged)
 
     # Compute overall health (latest race, average of systems)

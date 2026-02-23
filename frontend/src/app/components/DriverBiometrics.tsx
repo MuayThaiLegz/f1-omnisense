@@ -6,7 +6,7 @@ import {
 } from 'recharts';
 import {
   Heart, Thermometer, Loader2, AlertCircle, Swords, User, Trophy, GitCompareArrows,
-  ArrowUp, ArrowDown,
+  ArrowUp, ArrowDown, ShieldAlert, Eye, FileText, Bell, CheckCircle2, Activity,
 } from 'lucide-react';
 import { fetchCSV, parseCSV } from '../api/local';
 
@@ -29,7 +29,7 @@ const PIA_COLOR = '#22d3ee';
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload?.length) {
     return (
-      <div className="bg-[#0a0a12] border border-[rgba(255,128,0,0.2)] rounded-lg p-2 text-[10px]">
+      <div className="bg-[#0D1117] border border-[rgba(255,128,0,0.2)] rounded-lg p-2 text-[12px]">
         <div className="text-muted-foreground mb-1">{label}</div>
         {payload.map((entry: any, index: number) => (
           <div key={index} className="flex items-center gap-2">
@@ -46,13 +46,13 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 
 function KPI({ icon, label, value, detail, color = 'text-foreground' }: { icon: React.ReactNode; label: string; value: string; detail: string; color?: string }) {
   return (
-    <div className="bg-[#12121e] border border-[rgba(255,128,0,0.08)] rounded-xl p-3">
+    <div className="bg-[#1A1F2E] border border-[rgba(255,128,0,0.12)] rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.3)] p-3">
       <div className="flex items-center gap-2 mb-1.5">
         {icon}
-        <span className="text-[10px] text-muted-foreground tracking-wider">{label}</span>
+        <span className="text-[12px] text-muted-foreground tracking-wider">{label}</span>
       </div>
       <div className={`text-lg font-mono ${color}`}>{value}</div>
-      <div className="text-[10px] text-muted-foreground mt-0.5">{detail}</div>
+      <div className="text-[12px] text-muted-foreground mt-0.5">{detail}</div>
     </div>
   );
 }
@@ -67,23 +67,23 @@ function DeltaKPI({ label, norVal, piaVal, unit, icon, higher = 'neutral' }: {
   const absDiff = Math.abs(diff).toFixed(1);
   const norWins = diff > 0;
   return (
-    <div className="bg-[#12121e] border border-[rgba(255,128,0,0.08)] rounded-xl p-3">
+    <div className="bg-[#1A1F2E] border border-[rgba(255,128,0,0.12)] rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.3)] p-3">
       <div className="flex items-center gap-2 mb-2">
         {icon}
-        <span className="text-[10px] text-muted-foreground tracking-wider">{label}</span>
+        <span className="text-[12px] text-muted-foreground tracking-wider">{label}</span>
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <div className="text-[9px] text-muted-foreground mb-0.5">NOR</div>
+          <div className="text-[11px] text-muted-foreground mb-0.5">NOR</div>
           <div className="text-base font-mono" style={{ color: NOR_COLOR }}>{norVal}{unit}</div>
         </div>
         <div>
-          <div className="text-[9px] text-muted-foreground mb-0.5">PIA</div>
+          <div className="text-[11px] text-muted-foreground mb-0.5">PIA</div>
           <div className="text-base font-mono" style={{ color: PIA_COLOR }}>{piaVal}{unit}</div>
         </div>
       </div>
       {diff !== 0 && !isNaN(diff) && (
-        <div className="mt-2 flex items-center gap-1 text-[10px]">
+        <div className="mt-2 flex items-center gap-1 text-[12px]">
           {norWins
             ? <ArrowUp className="w-3 h-3 text-[#FF8000]" />
             : <ArrowDown className="w-3 h-3 text-cyan-400" />
@@ -174,6 +174,165 @@ function buildBattlePerLap(data: Record<string, string>[]) {
 function downsampleTrace(data: Record<string, string>[], maxPoints = 500) {
   const step = Math.max(1, Math.floor(data.length / maxPoints));
   return data.filter((_, i) => i % step === 0);
+}
+
+// ─── Biometric Intelligence helpers ──────────────────────────────────
+const BIO_MAINTENANCE: Record<string, { label: string; icon: React.ElementType; color: string }> = {
+  alert_and_remediate: { label: 'Immediate Action', icon: ShieldAlert, color: '#ef4444' },
+  alert:              { label: 'Schedule Review',   icon: Bell,        color: '#FF8000' },
+  log_and_monitor:    { label: 'Monitor',           icon: Eye,         color: '#eab308' },
+  log:                { label: 'Logged',            icon: FileText,    color: '#6b7280' },
+  none:               { label: 'No Action',         icon: CheckCircle2, color: '#22c55e' },
+};
+
+interface ThermalRace {
+  race: string;
+  health: number;
+  action: string;
+  probs: Record<string, number>;
+  features: Record<string, number>;
+}
+
+function BiometricIntelligence({ driverCode }: { driverCode: string }) {
+  const [races, setRaces] = useState<ThermalRace[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/pipeline/anomaly')
+      .then(r => r.json())
+      .then(data => {
+        const drv = (data.drivers ?? []).find((d: any) => d.code === driverCode);
+        if (!drv) return;
+        const mapped = (drv.races ?? []).map((r: any) => {
+          const t = r.systems?.Thermal ?? {};
+          return {
+            race: r.race,
+            health: t.health ?? 100,
+            action: t.maintenance_action ?? 'none',
+            probs: t.severity_probabilities ?? {},
+            features: t.features ?? {},
+          };
+        });
+        setRaces(mapped);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [driverCode]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center gap-2 p-3">
+        <Activity className="w-4 h-4 text-[#FF8000] animate-spin" />
+        <span className="text-[12px] text-muted-foreground">Loading biometric intelligence...</span>
+      </div>
+    );
+  }
+
+  if (!races.length) return null;
+
+  const actionRaces = races.filter(r => r.action !== 'none');
+  const avgHealth = Math.round(races.reduce((a, r) => a + r.health, 0) / races.length);
+  const worstRace = races.reduce((a, b) => a.health < b.health ? a : b);
+
+  return (
+    <div className="bg-[#1A1F2E] border border-[rgba(255,128,0,0.12)] rounded-xl p-4">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-sm font-medium text-foreground flex items-center gap-2">
+          <Activity className="w-3.5 h-3.5 text-[#FF8000]" />
+          Biometric Risk Intelligence
+        </h3>
+        <div className="flex items-center gap-3 text-[11px]">
+          <span className="text-muted-foreground">Season Avg</span>
+          <span className="font-mono font-semibold" style={{ color: avgHealth >= 75 ? '#22c55e' : avgHealth >= 50 ? '#FF8000' : '#ef4444' }}>
+            {avgHealth}%
+          </span>
+          {actionRaces.length > 0 && (
+            <span className="text-[#FF8000]">{actionRaces.length} race{actionRaces.length > 1 ? 's' : ''} flagged</span>
+          )}
+        </div>
+      </div>
+
+      {/* Risk timeline — one bar per race */}
+      <div className="flex gap-0.5 mb-3 h-8">
+        {races.map((r, i) => {
+          const info = BIO_MAINTENANCE[r.action] ?? BIO_MAINTENANCE.none;
+          const healthColor = r.health >= 75 ? '#22c55e' : r.health >= 50 ? '#FF8000' : '#ef4444';
+          return (
+            <div key={i} className="flex-1 relative group cursor-default" title={`${r.race}: ${r.health}% — ${info.label}`}>
+              <div className="h-full rounded-sm" style={{ background: `${healthColor}30`, borderBottom: `2px solid ${healthColor}` }}>
+                <div className="h-full rounded-sm" style={{ background: healthColor, opacity: 0.3, height: `${r.health}%` }} />
+              </div>
+              {r.action !== 'none' && (
+                <div className="absolute -top-0.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full" style={{ background: info.color }} />
+              )}
+              {/* Tooltip on hover */}
+              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 hidden group-hover:block z-10 pointer-events-none">
+                <div className="bg-[#0D1117] border border-[rgba(255,128,0,0.2)] rounded px-2 py-1 text-[10px] whitespace-nowrap">
+                  <div className="font-medium text-foreground">{r.race}</div>
+                  <div className="text-muted-foreground">Health: <span className="font-mono" style={{ color: healthColor }}>{r.health}%</span></div>
+                  {r.features.HeartRate_bpm && <div className="text-muted-foreground">HR: {r.features.HeartRate_bpm} bpm</div>}
+                  {r.features.CockpitTemp_C && <div className="text-muted-foreground">Cockpit: {r.features.CockpitTemp_C}°C</div>}
+                  {r.action !== 'none' && <div style={{ color: info.color }}>{info.label}</div>}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Flagged races */}
+      {actionRaces.length > 0 && (
+        <div className="space-y-1.5">
+          {actionRaces.slice(0, 3).map((r, i) => {
+            const info = BIO_MAINTENANCE[r.action] ?? BIO_MAINTENANCE.none;
+            const Icon = info.icon;
+            const order = ['normal', 'low', 'medium', 'high', 'critical'];
+            const colors: Record<string, string> = { normal: '#22c55e', low: '#6b7280', medium: '#eab308', high: '#FF8000', critical: '#ef4444' };
+            const total = Object.values(r.probs).reduce((a, b) => a + b, 0);
+            return (
+              <div key={i} className="flex items-center gap-2 rounded-lg p-2 bg-[#0D1117] border border-[rgba(255,128,0,0.08)]">
+                <Icon className="w-3 h-3 flex-shrink-0" style={{ color: info.color }} />
+                <span className="text-[11px] text-foreground w-24 truncate">{r.race}</span>
+                <span className="text-[11px] font-mono" style={{ color: r.health >= 75 ? '#22c55e' : r.health >= 50 ? '#FF8000' : '#ef4444' }}>{r.health}%</span>
+                {total > 0.01 && (
+                  <div className="flex h-1.5 flex-1 rounded-full overflow-hidden bg-[#222838]">
+                    {order.map(sev => {
+                      const pct = (r.probs[sev] ?? 0) * 100;
+                      if (pct < 1) return null;
+                      return <div key={sev} style={{ width: `${pct}%`, background: colors[sev] }} />;
+                    })}
+                  </div>
+                )}
+                <div className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium flex-shrink-0"
+                  style={{ background: `${info.color}15`, color: info.color, border: `1px solid ${info.color}25` }}>
+                  {info.label}
+                </div>
+              </div>
+            );
+          })}
+          {actionRaces.length > 3 && (
+            <div className="text-[11px] text-muted-foreground pl-5">+{actionRaces.length - 3} more flagged</div>
+          )}
+        </div>
+      )}
+
+      {/* Worst race callout */}
+      {worstRace.health < 70 && (
+        <div className="mt-2 flex items-center gap-2 text-[11px] px-2 py-1.5 rounded bg-[rgba(239,68,68,0.06)] border border-[rgba(239,68,68,0.15)]">
+          <AlertCircle className="w-3 h-3 text-red-400 flex-shrink-0" />
+          <span className="text-muted-foreground">Lowest biometric health:</span>
+          <span className="text-foreground font-medium">{worstRace.race}</span>
+          <span className="font-mono text-red-400">{worstRace.health}%</span>
+          {worstRace.features.HeartRate_bpm && (
+            <span className="text-muted-foreground">· HR {worstRace.features.HeartRate_bpm} bpm</span>
+          )}
+          {worstRace.features.CockpitTemp_C && (
+            <span className="text-muted-foreground">· {worstRace.features.CockpitTemp_C}°C cockpit</span>
+          )}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function DriverBiometrics() {
@@ -325,7 +484,7 @@ export function DriverBiometrics() {
       {/* Tab Switcher + Controls */}
       <div className="flex items-center gap-3 flex-wrap">
         {/* Tabs */}
-        <div className="flex items-center gap-1 bg-[#12121e] rounded-lg p-0.5 border border-[rgba(255,128,0,0.12)]">
+        <div className="flex items-center gap-1 bg-[#1A1F2E] rounded-lg p-0.5 border border-[rgba(255,128,0,0.12)]">
           {([
             { id: 'detail' as Tab, label: 'Race Detail' },
             { id: 'season' as Tab, label: 'Season' },
@@ -333,7 +492,7 @@ export function DriverBiometrics() {
             { id: 'racecompare' as Tab, label: 'Compare' },
           ]).map(t => (
             <button type="button" key={t.id} onClick={() => setTab(t.id)}
-              className={`text-xs px-4 py-1.5 rounded-md transition-all ${
+              className={`text-sm px-4 py-1.5 rounded-md transition-all ${
                 tab === t.id ? 'bg-[#FF8000]/10 text-[#FF8000]' : 'text-muted-foreground hover:text-foreground'
               }`}
             >{t.label}</button>
@@ -341,10 +500,10 @@ export function DriverBiometrics() {
         </div>
         {/* Year */}
         {tab !== 'racecompare' || compareMode !== 'year' ? (
-          <div className="flex items-center gap-1 bg-[#12121e] rounded-lg p-0.5 border border-[rgba(255,128,0,0.12)]">
+          <div className="flex items-center gap-1 bg-[#1A1F2E] rounded-lg p-0.5 border border-[rgba(255,128,0,0.12)]">
             {[2023, 2024].map(y => (
               <button type="button" key={y} onClick={() => { setYear(y); setRace(y === 2024 ? RACES_2024[0] : RACES_2023[0]); setRace2(y === 2024 ? RACES_2024[1] : RACES_2023[1]); }}
-                className={`text-xs px-3 py-1.5 rounded-md transition-all ${year === y ? 'bg-[#FF8000]/10 text-[#FF8000]' : 'text-muted-foreground hover:text-foreground'}`}
+                className={`text-sm px-3 py-1.5 rounded-md transition-all ${year === y ? 'bg-[#FF8000]/10 text-[#FF8000]' : 'text-muted-foreground hover:text-foreground'}`}
               >{y}</button>
             ))}
           </div>
@@ -352,7 +511,7 @@ export function DriverBiometrics() {
         {/* Race A (detail, h2h race mode, racecompare race mode) */}
         {(tab === 'detail' || (tab === 'h2h' && h2hMode === 'race') || (tab === 'racecompare' && compareMode === 'race')) && (
           <select value={race} onChange={e => setRace(e.target.value)} aria-label="Select race"
-            className="bg-[#12121e] border border-[rgba(255,128,0,0.12)] rounded-lg text-xs text-foreground px-3 py-1.5 outline-none"
+            className="bg-[#1A1F2E] border border-[rgba(255,128,0,0.12)] rounded-lg text-sm text-foreground px-3 py-1.5 outline-none"
           >
             {races.map(r => <option key={r} value={r}>{r} GP</option>)}
           </select>
@@ -360,9 +519,9 @@ export function DriverBiometrics() {
         {/* Race B (racecompare race mode) */}
         {tab === 'racecompare' && compareMode === 'race' && (
           <>
-            <span className="text-[10px] text-muted-foreground">vs</span>
+            <span className="text-[12px] text-muted-foreground">vs</span>
             <select value={race2} onChange={e => setRace2(e.target.value)} aria-label="Select second race"
-              className="bg-[#12121e] border border-[rgba(255,128,0,0.12)] rounded-lg text-xs text-foreground px-3 py-1.5 outline-none"
+              className="bg-[#1A1F2E] border border-[rgba(255,128,0,0.12)] rounded-lg text-sm text-foreground px-3 py-1.5 outline-none"
             >
               {races.map(r => <option key={r} value={r}>{r} GP</option>)}
             </select>
@@ -370,45 +529,45 @@ export function DriverBiometrics() {
         )}
         {/* Driver (not in h2h — h2h always shows both) */}
         {tab !== 'h2h' && (
-          <div className="flex items-center gap-1 bg-[#12121e] rounded-lg p-0.5 border border-[rgba(255,128,0,0.12)]">
+          <div className="flex items-center gap-1 bg-[#1A1F2E] rounded-lg p-0.5 border border-[rgba(255,128,0,0.12)]">
             {['NOR', 'PIA'].map(d => (
               <button type="button" key={d} onClick={() => setDriver(d)}
-                className={`text-xs px-3 py-1.5 rounded-md transition-all ${driver === d ? 'bg-[#FF8000]/10 text-[#FF8000]' : 'text-muted-foreground hover:text-foreground'}`}
+                className={`text-sm px-3 py-1.5 rounded-md transition-all ${driver === d ? 'bg-[#FF8000]/10 text-[#FF8000]' : 'text-muted-foreground hover:text-foreground'}`}
               >{d}</button>
             ))}
           </div>
         )}
         {/* H2H sub-mode toggle */}
         {tab === 'h2h' && (
-          <div className="flex items-center gap-1 bg-[#12121e] rounded-lg p-0.5 border border-[rgba(255,128,0,0.12)]">
+          <div className="flex items-center gap-1 bg-[#1A1F2E] rounded-lg p-0.5 border border-[rgba(255,128,0,0.12)]">
             {([{ id: 'race' as const, label: 'Single Race' }, { id: 'season' as const, label: 'Full Season' }]).map(m => (
               <button type="button" key={m.id} onClick={() => setH2hMode(m.id)}
-                className={`text-xs px-3 py-1.5 rounded-md transition-all ${h2hMode === m.id ? 'bg-[#FF8000]/10 text-[#FF8000]' : 'text-muted-foreground hover:text-foreground'}`}
+                className={`text-sm px-3 py-1.5 rounded-md transition-all ${h2hMode === m.id ? 'bg-[#FF8000]/10 text-[#FF8000]' : 'text-muted-foreground hover:text-foreground'}`}
               >{m.label}</button>
             ))}
           </div>
         )}
         {/* Compare sub-mode toggle */}
         {tab === 'racecompare' && (
-          <div className="flex items-center gap-1 bg-[#12121e] rounded-lg p-0.5 border border-[rgba(255,128,0,0.12)]">
+          <div className="flex items-center gap-1 bg-[#1A1F2E] rounded-lg p-0.5 border border-[rgba(255,128,0,0.12)]">
             {([{ id: 'race' as const, label: 'Race vs Race' }, { id: 'year' as const, label: '2023 vs 2024' }]).map(m => (
               <button type="button" key={m.id} onClick={() => setCompareMode(m.id)}
-                className={`text-xs px-3 py-1.5 rounded-md transition-all ${compareMode === m.id ? 'bg-[#FF8000]/10 text-[#FF8000]' : 'text-muted-foreground hover:text-foreground'}`}
+                className={`text-sm px-3 py-1.5 rounded-md transition-all ${compareMode === m.id ? 'bg-[#FF8000]/10 text-[#FF8000]' : 'text-muted-foreground hover:text-foreground'}`}
               >{m.label}</button>
             ))}
           </div>
         )}
         {/* Sample/race count */}
         {tab === 'detail' && (
-          <span className="text-[10px] text-muted-foreground">{driverData.length.toLocaleString()} samples</span>
+          <span className="text-[12px] text-muted-foreground">{driverData.length.toLocaleString()} samples</span>
         )}
         {tab === 'season' && seasonSummary.length > 0 && (
-          <span className="text-[10px] text-muted-foreground">{seasonSummary.length} races</span>
+          <span className="text-[12px] text-muted-foreground">{seasonSummary.length} races</span>
         )}
       </div>
 
       {error && tab === 'detail' && (
-        <div className="flex items-center gap-2 text-amber-400 text-xs bg-amber-500/10 rounded-lg p-3">
+        <div className="flex items-center gap-2 text-amber-400 text-sm bg-amber-500/10 rounded-lg p-3">
           <AlertCircle className="w-4 h-4" />
           {error}
         </div>
@@ -416,7 +575,7 @@ export function DriverBiometrics() {
 
       {tab === 'detail' && (
         <RaceDetailView career={career} kpis={kpis} hrTrace={hrTrace} tempTrace={tempTrace}
-          battlePerLap={battlePerLap} hrPerLap={hrPerLap} race={race} year={year} loading={loading} />
+          battlePerLap={battlePerLap} hrPerLap={hrPerLap} race={race} year={year} loading={loading} driver={driver} />
       )}
       {tab === 'season' && (
         <SeasonCompareView seasonSummary={seasonSummary} loading={summaryLoading}
@@ -442,7 +601,7 @@ export function DriverBiometrics() {
 
 /* ─── Race Detail View ─── */
 
-function RaceDetailView({ career, kpis, hrTrace, tempTrace, battlePerLap, hrPerLap, race, year, loading }: {
+function RaceDetailView({ career, kpis, hrTrace, tempTrace, battlePerLap, hrPerLap, race, year, loading, driver }: {
   career: CareerData | null;
   kpis: { avgHR: string; peakHR: string; avgTemp: string; battleIntensity: string } | null;
   hrTrace: { lap: number; hr: number; speed: number }[];
@@ -452,6 +611,7 @@ function RaceDetailView({ career, kpis, hrTrace, tempTrace, battlePerLap, hrPerL
   race: string;
   year: number;
   loading: boolean;
+  driver: string;
 }) {
   if (loading) {
     return (
@@ -467,56 +627,56 @@ function RaceDetailView({ career, kpis, hrTrace, tempTrace, battlePerLap, hrPerL
       {/* Bio Card + KPIs */}
       <div className="grid grid-cols-12 gap-3">
         {career && (
-          <div className="col-span-4 bg-[#12121e] border border-[rgba(255,128,0,0.12)] rounded-xl p-4">
+          <div className="col-span-4 bg-[#1A1F2E] border border-[rgba(255,128,0,0.12)] rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.3)] p-4">
             <div className="flex items-center gap-3 mb-3">
               <div className="w-10 h-10 rounded-full bg-[#FF8000]/10 flex items-center justify-center">
                 <User className="w-5 h-5 text-[#FF8000]" />
               </div>
               <div>
                 <h3 className="text-sm text-foreground font-medium">{career.driver_name}</h3>
-                <div className="text-[10px] text-muted-foreground">{career.nationality} · Born {career.date_of_birth}</div>
+                <div className="text-[12px] text-muted-foreground">{career.nationality} · Born {career.date_of_birth}</div>
               </div>
             </div>
             <div className="grid grid-cols-3 gap-2">
               <div className="text-center">
                 <div className="text-sm font-mono text-[#FF8000]">{career.races}</div>
-                <div className="text-[9px] text-muted-foreground">RACES</div>
+                <div className="text-[11px] text-muted-foreground">RACES</div>
               </div>
               <div className="text-center">
                 <div className="text-sm font-mono text-green-400">{career.wins}</div>
-                <div className="text-[9px] text-muted-foreground">WINS</div>
+                <div className="text-[11px] text-muted-foreground">WINS</div>
               </div>
               <div className="text-center">
                 <div className="text-sm font-mono text-amber-400">{career.podiums}</div>
-                <div className="text-[9px] text-muted-foreground">PODIUMS</div>
+                <div className="text-[11px] text-muted-foreground">PODIUMS</div>
               </div>
               <div className="text-center">
                 <div className="text-sm font-mono text-cyan-400">{career.poles}</div>
-                <div className="text-[9px] text-muted-foreground">POLES</div>
+                <div className="text-[11px] text-muted-foreground">POLES</div>
               </div>
               <div className="text-center">
                 <div className="text-sm font-mono text-foreground">{career.total_points}</div>
-                <div className="text-[9px] text-muted-foreground">POINTS</div>
+                <div className="text-[11px] text-muted-foreground">POINTS</div>
               </div>
               <div className="text-center">
                 <div className="text-sm font-mono text-foreground">{career.num_seasons}</div>
-                <div className="text-[9px] text-muted-foreground">SEASONS</div>
+                <div className="text-[11px] text-muted-foreground">SEASONS</div>
               </div>
             </div>
-            <div className="mt-3 pt-3 border-t border-[rgba(255,128,0,0.08)] space-y-1">
-              <div className="flex justify-between text-[10px]">
+            <div className="mt-3 pt-3 border-t border-[rgba(255,128,0,0.12)] space-y-1">
+              <div className="flex justify-between text-[12px]">
                 <span className="text-muted-foreground">Win Rate</span>
                 <span className="text-foreground font-mono">{career.win_rate_pct}%</span>
               </div>
-              <div className="flex justify-between text-[10px]">
+              <div className="flex justify-between text-[12px]">
                 <span className="text-muted-foreground">Podium Rate</span>
                 <span className="text-foreground font-mono">{career.podium_rate_pct}%</span>
               </div>
-              <div className="flex justify-between text-[10px]">
+              <div className="flex justify-between text-[12px]">
                 <span className="text-muted-foreground">Points/Race</span>
                 <span className="text-foreground font-mono">{career.points_per_race}</span>
               </div>
-              <div className="flex justify-between text-[10px]">
+              <div className="flex justify-between text-[12px]">
                 <span className="text-muted-foreground">Seasons at McLaren</span>
                 <span className="text-foreground font-mono">{career.seasons}</span>
               </div>
@@ -536,12 +696,15 @@ function RaceDetailView({ career, kpis, hrTrace, tempTrace, battlePerLap, hrPerL
         </div>
       </div>
 
+      {/* Biometric Risk Intelligence — anomaly detection on driver bio data */}
+      <BiometricIntelligence driverCode={driver} />
+
       {/* Heart Rate Trace + Temperature */}
       {hrTrace.length > 0 && (
         <div className="grid grid-cols-2 gap-3">
-          <div className="bg-[#12121e] border border-[rgba(255,128,0,0.08)] rounded-xl p-4">
-            <h3 className="text-xs text-foreground mb-1">Heart Rate Trace</h3>
-            <p className="text-[10px] text-muted-foreground mb-3">BPM over race — zones: green &lt;150, amber 150-170, red &gt;170</p>
+          <div className="bg-[#1A1F2E] border border-[rgba(255,128,0,0.12)] rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.3)] p-4">
+            <h3 className="text-sm text-foreground mb-1">Heart Rate Trace</h3>
+            <p className="text-[12px] text-muted-foreground mb-3">BPM over race — zones: green &lt;150, amber 150-170, red &gt;170</p>
             <div className="h-[220px]">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={hrTrace}>
@@ -551,7 +714,7 @@ function RaceDetailView({ career, kpis, hrTrace, tempTrace, battlePerLap, hrPerL
                       <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid stroke="rgba(255,128,0,0.06)" />
+                  <CartesianGrid stroke="rgba(255,128,0,0.12)" />
                   <XAxis dataKey="lap" tick={{ fill: '#8888a0', fontSize: 9 }} />
                   <YAxis tick={{ fill: '#8888a0', fontSize: 9 }} domain={[120, 200]} />
                   <Tooltip content={<CustomTooltip />} />
@@ -563,13 +726,13 @@ function RaceDetailView({ career, kpis, hrTrace, tempTrace, battlePerLap, hrPerL
             </div>
           </div>
 
-          <div className="bg-[#12121e] border border-[rgba(255,128,0,0.08)] rounded-xl p-4">
-            <h3 className="text-xs text-foreground mb-1">Temperature Profile</h3>
-            <p className="text-[10px] text-muted-foreground mb-3">Cockpit vs air vs track temperature</p>
+          <div className="bg-[#1A1F2E] border border-[rgba(255,128,0,0.12)] rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.3)] p-4">
+            <h3 className="text-sm text-foreground mb-1">Temperature Profile</h3>
+            <p className="text-[12px] text-muted-foreground mb-3">Cockpit vs air vs track temperature</p>
             <div className="h-[220px]">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={tempTrace}>
-                  <CartesianGrid stroke="rgba(255,128,0,0.06)" />
+                  <CartesianGrid stroke="rgba(255,128,0,0.12)" />
                   <XAxis dataKey="lap" tick={{ fill: '#8888a0', fontSize: 9 }} />
                   <YAxis tick={{ fill: '#8888a0', fontSize: 9 }} />
                   <Tooltip content={<CustomTooltip />} />
@@ -586,13 +749,13 @@ function RaceDetailView({ career, kpis, hrTrace, tempTrace, battlePerLap, hrPerL
       {/* HR vs Speed + Battle Intensity */}
       {hrTrace.length > 0 && (
         <div className="grid grid-cols-2 gap-3">
-          <div className="bg-[#12121e] border border-[rgba(255,128,0,0.08)] rounded-xl p-4">
-            <h3 className="text-xs text-foreground mb-1">Heart Rate vs Speed</h3>
-            <p className="text-[10px] text-muted-foreground mb-3">HR spikes correlated with speed changes</p>
+          <div className="bg-[#1A1F2E] border border-[rgba(255,128,0,0.12)] rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.3)] p-4">
+            <h3 className="text-sm text-foreground mb-1">Heart Rate vs Speed</h3>
+            <p className="text-[12px] text-muted-foreground mb-3">HR spikes correlated with speed changes</p>
             <div className="h-[220px]">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={hrTrace}>
-                  <CartesianGrid stroke="rgba(255,128,0,0.06)" />
+                  <CartesianGrid stroke="rgba(255,128,0,0.12)" />
                   <XAxis dataKey="lap" tick={{ fill: '#8888a0', fontSize: 9 }} />
                   <YAxis yAxisId="hr" tick={{ fill: '#8888a0', fontSize: 9 }} domain={[120, 200]} />
                   <YAxis yAxisId="speed" orientation="right" tick={{ fill: '#8888a0', fontSize: 9 }} />
@@ -605,13 +768,13 @@ function RaceDetailView({ career, kpis, hrTrace, tempTrace, battlePerLap, hrPerL
           </div>
 
           {battlePerLap.length > 0 && (
-            <div className="bg-[#12121e] border border-[rgba(255,128,0,0.08)] rounded-xl p-4">
-              <h3 className="text-xs text-foreground mb-1">Battle Intensity by Lap</h3>
-              <p className="text-[10px] text-muted-foreground mb-3">Close racing metric — % of intervals under 1 second</p>
+            <div className="bg-[#1A1F2E] border border-[rgba(255,128,0,0.12)] rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.3)] p-4">
+              <h3 className="text-sm text-foreground mb-1">Battle Intensity by Lap</h3>
+              <p className="text-[12px] text-muted-foreground mb-3">Close racing metric — % of intervals under 1 second</p>
               <div className="h-[220px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={battlePerLap}>
-                    <CartesianGrid stroke="rgba(255,128,0,0.06)" />
+                    <CartesianGrid stroke="rgba(255,128,0,0.12)" />
                     <XAxis dataKey="lap" tick={{ fill: '#8888a0', fontSize: 9 }} />
                     <YAxis tick={{ fill: '#8888a0', fontSize: 9 }} domain={[0, 100]} />
                     <Tooltip content={<CustomTooltip />} />
@@ -626,9 +789,9 @@ function RaceDetailView({ career, kpis, hrTrace, tempTrace, battlePerLap, hrPerL
 
       {/* Avg HR per Lap */}
       {hrPerLap.length > 0 && (
-        <div className="bg-[#12121e] border border-[rgba(255,128,0,0.08)] rounded-xl p-4">
-          <h3 className="text-xs text-foreground mb-1">Average Heart Rate by Lap</h3>
-          <p className="text-[10px] text-muted-foreground mb-3">Lap-by-lap average BPM showing fatigue and adrenaline patterns</p>
+        <div className="bg-[#1A1F2E] border border-[rgba(255,128,0,0.12)] rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.3)] p-4">
+          <h3 className="text-sm text-foreground mb-1">Average Heart Rate by Lap</h3>
+          <p className="text-[12px] text-muted-foreground mb-3">Lap-by-lap average BPM showing fatigue and adrenaline patterns</p>
           <div className="h-[200px]">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={hrPerLap}>
@@ -638,7 +801,7 @@ function RaceDetailView({ career, kpis, hrTrace, tempTrace, battlePerLap, hrPerL
                     <stop offset="95%" stopColor="#FF8000" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid stroke="rgba(255,128,0,0.06)" />
+                <CartesianGrid stroke="rgba(255,128,0,0.12)" />
                 <XAxis dataKey="lap" tick={{ fill: '#8888a0', fontSize: 9 }} />
                 <YAxis tick={{ fill: '#8888a0', fontSize: 9 }} domain={['auto', 'auto']} />
                 <Tooltip content={<CustomTooltip />} />
@@ -653,17 +816,17 @@ function RaceDetailView({ career, kpis, hrTrace, tempTrace, battlePerLap, hrPerL
 
       {/* Career Stats Table */}
       {career && (
-        <div className="bg-[#12121e] border border-[rgba(255,128,0,0.08)] rounded-xl p-4">
-          <h3 className="text-xs text-foreground mb-3 flex items-center gap-2">
+        <div className="bg-[#1A1F2E] border border-[rgba(255,128,0,0.12)] rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.3)] p-4">
+          <h3 className="text-sm text-foreground mb-3 flex items-center gap-2">
             <Trophy className="w-3 h-3 text-[#FF8000]" />
             McLaren Career Summary — {career.driver_name}
           </h3>
-          <div className="grid grid-cols-[1fr_1fr_1fr_1fr_1fr_1fr_1fr_1fr] gap-px bg-[rgba(255,128,0,0.06)] rounded-lg overflow-hidden">
+          <div className="grid grid-cols-[1fr_1fr_1fr_1fr_1fr_1fr_1fr_1fr] gap-px bg-[rgba(255,128,0,0.12)] rounded-lg overflow-hidden">
             {['Seasons', 'Races', 'Wins', 'Podiums', 'Poles', 'DNFs', 'Points', 'Pts/Race'].map(h => (
-              <div key={h} className="bg-[#1a1a2e] px-3 py-2 text-[9px] text-muted-foreground tracking-wider text-center">{h}</div>
+              <div key={h} className="bg-[#222838] px-3 py-2 text-[11px] text-muted-foreground tracking-wider text-center">{h}</div>
             ))}
             {[career.num_seasons, career.races, career.wins, career.podiums, career.poles, career.dnfs, career.total_points, career.points_per_race].map((v, i) => (
-              <div key={i} className="bg-[#12121e] px-3 py-2 text-xs font-mono text-foreground text-center">{v}</div>
+              <div key={i} className="bg-[#1A1F2E] px-3 py-2 text-sm font-mono text-foreground text-center">{v}</div>
             ))}
           </div>
         </div>
@@ -717,13 +880,13 @@ function SeasonCompareView({ seasonSummary, loading, year, driver, highlightRace
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <div className="bg-[#12121e] border border-[rgba(255,128,0,0.08)] rounded-xl p-4">
-          <h3 className="text-xs text-foreground mb-1">Average Heart Rate by Race</h3>
-          <p className="text-[10px] text-muted-foreground mb-3">{driver} — {year} season, BPM per race</p>
+        <div className="bg-[#1A1F2E] border border-[rgba(255,128,0,0.12)] rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.3)] p-4">
+          <h3 className="text-sm text-foreground mb-1">Average Heart Rate by Race</h3>
+          <p className="text-[12px] text-muted-foreground mb-3">{driver} — {year} season, BPM per race</p>
           <div className="h-[260px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={seasonSummary}>
-                <CartesianGrid stroke="rgba(255,128,0,0.06)" />
+                <CartesianGrid stroke="rgba(255,128,0,0.12)" />
                 <XAxis dataKey="race" tick={{ fill: '#8888a0', fontSize: 8 }} angle={-45} textAnchor="end" height={60} interval={0} />
                 <YAxis tick={{ fill: '#8888a0', fontSize: 9 }} domain={['auto', 'auto']} />
                 <Tooltip content={<CustomTooltip />} />
@@ -738,13 +901,13 @@ function SeasonCompareView({ seasonSummary, loading, year, driver, highlightRace
           </div>
         </div>
 
-        <div className="bg-[#12121e] border border-[rgba(255,128,0,0.08)] rounded-xl p-4">
-          <h3 className="text-xs text-foreground mb-1">Peak Heart Rate by Race</h3>
-          <p className="text-[10px] text-muted-foreground mb-3">Maximum BPM recorded per race</p>
+        <div className="bg-[#1A1F2E] border border-[rgba(255,128,0,0.12)] rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.3)] p-4">
+          <h3 className="text-sm text-foreground mb-1">Peak Heart Rate by Race</h3>
+          <p className="text-[12px] text-muted-foreground mb-3">Maximum BPM recorded per race</p>
           <div className="h-[260px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={seasonSummary}>
-                <CartesianGrid stroke="rgba(255,128,0,0.06)" />
+                <CartesianGrid stroke="rgba(255,128,0,0.12)" />
                 <XAxis dataKey="race" tick={{ fill: '#8888a0', fontSize: 8 }} angle={-45} textAnchor="end" height={60} interval={0} />
                 <YAxis tick={{ fill: '#8888a0', fontSize: 9 }} domain={['auto', 'auto']} />
                 <Tooltip content={<CustomTooltip />} />
@@ -760,13 +923,13 @@ function SeasonCompareView({ seasonSummary, loading, year, driver, highlightRace
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <div className="bg-[#12121e] border border-[rgba(255,128,0,0.08)] rounded-xl p-4">
-          <h3 className="text-xs text-foreground mb-1">Cockpit Temperature by Race</h3>
-          <p className="text-[10px] text-muted-foreground mb-3">Average cockpit vs air temperature per race</p>
+        <div className="bg-[#1A1F2E] border border-[rgba(255,128,0,0.12)] rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.3)] p-4">
+          <h3 className="text-sm text-foreground mb-1">Cockpit Temperature by Race</h3>
+          <p className="text-[12px] text-muted-foreground mb-3">Average cockpit vs air temperature per race</p>
           <div className="h-[260px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={seasonSummary}>
-                <CartesianGrid stroke="rgba(255,128,0,0.06)" />
+                <CartesianGrid stroke="rgba(255,128,0,0.12)" />
                 <XAxis dataKey="race" tick={{ fill: '#8888a0', fontSize: 8 }} angle={-45} textAnchor="end" height={60} interval={0} />
                 <YAxis tick={{ fill: '#8888a0', fontSize: 9 }} />
                 <Tooltip content={<CustomTooltip />} />
@@ -777,13 +940,13 @@ function SeasonCompareView({ seasonSummary, loading, year, driver, highlightRace
           </div>
         </div>
 
-        <div className="bg-[#12121e] border border-[rgba(255,128,0,0.08)] rounded-xl p-4">
-          <h3 className="text-xs text-foreground mb-1">Battle Intensity by Race</h3>
-          <p className="text-[10px] text-muted-foreground mb-3">Close racing metric — higher = more wheel-to-wheel</p>
+        <div className="bg-[#1A1F2E] border border-[rgba(255,128,0,0.12)] rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.3)] p-4">
+          <h3 className="text-sm text-foreground mb-1">Battle Intensity by Race</h3>
+          <p className="text-[12px] text-muted-foreground mb-3">Close racing metric — higher = more wheel-to-wheel</p>
           <div className="h-[260px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={seasonSummary}>
-                <CartesianGrid stroke="rgba(255,128,0,0.06)" />
+                <CartesianGrid stroke="rgba(255,128,0,0.12)" />
                 <XAxis dataKey="race" tick={{ fill: '#8888a0', fontSize: 8 }} angle={-45} textAnchor="end" height={60} interval={0} />
                 <YAxis tick={{ fill: '#8888a0', fontSize: 9 }} domain={[0, 'auto']} />
                 <Tooltip content={<CustomTooltip />} />
@@ -800,40 +963,40 @@ function SeasonCompareView({ seasonSummary, loading, year, driver, highlightRace
       </div>
 
       {/* Season Summary Table */}
-      <div className="bg-[#12121e] border border-[rgba(255,128,0,0.08)] rounded-xl p-4">
-        <h3 className="text-xs text-foreground mb-3 flex items-center gap-2">
+      <div className="bg-[#1A1F2E] border border-[rgba(255,128,0,0.12)] rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.3)] p-4">
+        <h3 className="text-sm text-foreground mb-3 flex items-center gap-2">
           <GitCompareArrows className="w-3 h-3 text-[#FF8000]" />
           {driver} — {year} Season Biometric Summary
         </h3>
         <div className="overflow-x-auto">
-          <div className="grid grid-cols-[180px_80px_80px_80px_80px_80px_80px_80px] gap-px bg-[rgba(255,128,0,0.06)] rounded-lg overflow-hidden min-w-[740px]">
+          <div className="grid grid-cols-[180px_80px_80px_80px_80px_80px_80px_80px] gap-px bg-[rgba(255,128,0,0.12)] rounded-lg overflow-hidden min-w-[740px]">
             {['Race', 'Avg HR', 'Peak HR', 'Cockpit °C', 'Air °C', 'Track °C', 'Battle %', 'Samples'].map(h => (
-              <div key={h} className="bg-[#1a1a2e] px-3 py-2 text-[9px] text-muted-foreground tracking-wider">{h}</div>
+              <div key={h} className="bg-[#222838] px-3 py-2 text-[11px] text-muted-foreground tracking-wider">{h}</div>
             ))}
             {seasonSummary.map((r, i) => (
               <React.Fragment key={i}>
-                <div className={`px-3 py-1.5 text-xs ${r.race === highlightRace ? 'bg-[#FF8000]/10 text-[#FF8000]' : 'bg-[#12121e] text-foreground'}`}>
+                <div className={`px-3 py-1.5 text-sm ${r.race === highlightRace ? 'bg-[#FF8000]/10 text-[#FF8000]' : 'bg-[#1A1F2E] text-foreground'}`}>
                   {r.race} GP
                 </div>
-                <div className={`px-3 py-1.5 text-xs font-mono ${r.race === highlightRace ? 'bg-[#FF8000]/10' : 'bg-[#12121e]'} ${r.avgHR > seasonAvgHR + 2 ? 'text-red-400' : 'text-foreground'}`}>
+                <div className={`px-3 py-1.5 text-sm font-mono ${r.race === highlightRace ? 'bg-[#FF8000]/10' : 'bg-[#1A1F2E]'} ${r.avgHR > seasonAvgHR + 2 ? 'text-red-400' : 'text-foreground'}`}>
                   {r.avgHR.toFixed(1)}
                 </div>
-                <div className={`px-3 py-1.5 text-xs font-mono ${r.race === highlightRace ? 'bg-[#FF8000]/10' : 'bg-[#12121e]'} ${r.peakHR > 185 ? 'text-rose-500' : 'text-foreground'}`}>
+                <div className={`px-3 py-1.5 text-sm font-mono ${r.race === highlightRace ? 'bg-[#FF8000]/10' : 'bg-[#1A1F2E]'} ${r.peakHR > 185 ? 'text-rose-500' : 'text-foreground'}`}>
                   {r.peakHR.toFixed(1)}
                 </div>
-                <div className={`px-3 py-1.5 text-xs font-mono ${r.race === highlightRace ? 'bg-[#FF8000]/10' : 'bg-[#12121e]'} ${r.avgTemp > 50 ? 'text-amber-400' : 'text-foreground'}`}>
+                <div className={`px-3 py-1.5 text-sm font-mono ${r.race === highlightRace ? 'bg-[#FF8000]/10' : 'bg-[#1A1F2E]'} ${r.avgTemp > 50 ? 'text-amber-400' : 'text-foreground'}`}>
                   {r.avgTemp.toFixed(1)}
                 </div>
-                <div className={`px-3 py-1.5 text-xs font-mono ${r.race === highlightRace ? 'bg-[#FF8000]/10' : 'bg-[#12121e]'} text-foreground`}>
+                <div className={`px-3 py-1.5 text-sm font-mono ${r.race === highlightRace ? 'bg-[#FF8000]/10' : 'bg-[#1A1F2E]'} text-foreground`}>
                   {r.airTemp.toFixed(1)}
                 </div>
-                <div className={`px-3 py-1.5 text-xs font-mono ${r.race === highlightRace ? 'bg-[#FF8000]/10' : 'bg-[#12121e]'} text-foreground`}>
+                <div className={`px-3 py-1.5 text-sm font-mono ${r.race === highlightRace ? 'bg-[#FF8000]/10' : 'bg-[#1A1F2E]'} text-foreground`}>
                   {r.trackTemp.toFixed(1)}
                 </div>
-                <div className={`px-3 py-1.5 text-xs font-mono ${r.race === highlightRace ? 'bg-[#FF8000]/10' : 'bg-[#12121e]'} ${r.battleIntensity > 40 ? 'text-purple-400' : 'text-foreground'}`}>
+                <div className={`px-3 py-1.5 text-sm font-mono ${r.race === highlightRace ? 'bg-[#FF8000]/10' : 'bg-[#1A1F2E]'} ${r.battleIntensity > 40 ? 'text-purple-400' : 'text-foreground'}`}>
                   {r.battleIntensity.toFixed(1)}
                 </div>
-                <div className={`px-3 py-1.5 text-[10px] font-mono ${r.race === highlightRace ? 'bg-[#FF8000]/10' : 'bg-[#12121e]'} text-muted-foreground`}>
+                <div className={`px-3 py-1.5 text-[12px] font-mono ${r.race === highlightRace ? 'bg-[#FF8000]/10' : 'bg-[#1A1F2E]'} text-muted-foreground`}>
                   {r.samples.toLocaleString()}
                 </div>
               </React.Fragment>
@@ -934,15 +1097,15 @@ function H2HRaceView({ raceData, race, year }: { raceData: Record<string, string
 
       {/* HR Trace Overlay */}
       {mergedHrTrace.length > 0 && (
-        <div className="bg-[#12121e] border border-[rgba(255,128,0,0.08)] rounded-xl p-4">
-          <h3 className="text-xs text-foreground mb-1">Heart Rate Overlay — {race} GP {year}</h3>
-          <p className="text-[10px] text-muted-foreground mb-3">
+        <div className="bg-[#1A1F2E] border border-[rgba(255,128,0,0.12)] rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.3)] p-4">
+          <h3 className="text-sm text-foreground mb-1">Heart Rate Overlay — {race} GP {year}</h3>
+          <p className="text-[12px] text-muted-foreground mb-3">
             <span style={{ color: NOR_COLOR }}>■</span> NOR vs <span style={{ color: PIA_COLOR }}>■</span> PIA
           </p>
           <div className="h-[260px]">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={mergedHrTrace}>
-                <CartesianGrid stroke="rgba(255,128,0,0.06)" />
+                <CartesianGrid stroke="rgba(255,128,0,0.12)" />
                 <XAxis dataKey="lap" tick={{ fill: '#8888a0', fontSize: 9 }} />
                 <YAxis tick={{ fill: '#8888a0', fontSize: 9 }} domain={[120, 200]} />
                 <Tooltip content={<CustomTooltip />} />
@@ -959,13 +1122,13 @@ function H2HRaceView({ raceData, race, year }: { raceData: Record<string, string
       {/* Avg HR per Lap + Battle Intensity */}
       <div className="grid grid-cols-2 gap-3">
         {mergedHrPerLap.length > 0 && (
-          <div className="bg-[#12121e] border border-[rgba(255,128,0,0.08)] rounded-xl p-4">
-            <h3 className="text-xs text-foreground mb-1">Average HR per Lap</h3>
-            <p className="text-[10px] text-muted-foreground mb-3">Lap-by-lap comparison</p>
+          <div className="bg-[#1A1F2E] border border-[rgba(255,128,0,0.12)] rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.3)] p-4">
+            <h3 className="text-sm text-foreground mb-1">Average HR per Lap</h3>
+            <p className="text-[12px] text-muted-foreground mb-3">Lap-by-lap comparison</p>
             <div className="h-[240px]">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={mergedHrPerLap}>
-                  <CartesianGrid stroke="rgba(255,128,0,0.06)" />
+                  <CartesianGrid stroke="rgba(255,128,0,0.12)" />
                   <XAxis dataKey="lap" tick={{ fill: '#8888a0', fontSize: 9 }} />
                   <YAxis tick={{ fill: '#8888a0', fontSize: 9 }} domain={['auto', 'auto']} />
                   <Tooltip content={<CustomTooltip />} />
@@ -977,13 +1140,13 @@ function H2HRaceView({ raceData, race, year }: { raceData: Record<string, string
           </div>
         )}
         {mergedBattle.length > 0 && (
-          <div className="bg-[#12121e] border border-[rgba(255,128,0,0.08)] rounded-xl p-4">
-            <h3 className="text-xs text-foreground mb-1">Battle Intensity per Lap</h3>
-            <p className="text-[10px] text-muted-foreground mb-3">Close racing comparison</p>
+          <div className="bg-[#1A1F2E] border border-[rgba(255,128,0,0.12)] rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.3)] p-4">
+            <h3 className="text-sm text-foreground mb-1">Battle Intensity per Lap</h3>
+            <p className="text-[12px] text-muted-foreground mb-3">Close racing comparison</p>
             <div className="h-[240px]">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={mergedBattle}>
-                  <CartesianGrid stroke="rgba(255,128,0,0.06)" />
+                  <CartesianGrid stroke="rgba(255,128,0,0.12)" />
                   <XAxis dataKey="lap" tick={{ fill: '#8888a0', fontSize: 9 }} />
                   <YAxis tick={{ fill: '#8888a0', fontSize: 9 }} domain={[0, 100]} />
                   <Tooltip content={<CustomTooltip />} />
@@ -1045,13 +1208,13 @@ function H2HSeasonView({ seasonNor, seasonPia, year }: { seasonNor: RaceSummary[
 
       {/* Avg HR by Race — dual bars */}
       <div className="grid grid-cols-2 gap-3">
-        <div className="bg-[#12121e] border border-[rgba(255,128,0,0.08)] rounded-xl p-4">
-          <h3 className="text-xs text-foreground mb-1">Average HR by Race — NOR vs PIA</h3>
-          <p className="text-[10px] text-muted-foreground mb-3">{year} season comparison</p>
+        <div className="bg-[#1A1F2E] border border-[rgba(255,128,0,0.12)] rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.3)] p-4">
+          <h3 className="text-sm text-foreground mb-1">Average HR by Race — NOR vs PIA</h3>
+          <p className="text-[12px] text-muted-foreground mb-3">{year} season comparison</p>
           <div className="h-[280px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={mergedSeason}>
-                <CartesianGrid stroke="rgba(255,128,0,0.06)" />
+                <CartesianGrid stroke="rgba(255,128,0,0.12)" />
                 <XAxis dataKey="race" tick={{ fill: '#8888a0', fontSize: 8 }} angle={-45} textAnchor="end" height={60} interval={0} />
                 <YAxis tick={{ fill: '#8888a0', fontSize: 9 }} domain={['auto', 'auto']} />
                 <Tooltip content={<CustomTooltip />} />
@@ -1062,13 +1225,13 @@ function H2HSeasonView({ seasonNor, seasonPia, year }: { seasonNor: RaceSummary[
           </div>
         </div>
 
-        <div className="bg-[#12121e] border border-[rgba(255,128,0,0.08)] rounded-xl p-4">
-          <h3 className="text-xs text-foreground mb-1">Peak HR by Race — NOR vs PIA</h3>
-          <p className="text-[10px] text-muted-foreground mb-3">Max BPM per race</p>
+        <div className="bg-[#1A1F2E] border border-[rgba(255,128,0,0.12)] rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.3)] p-4">
+          <h3 className="text-sm text-foreground mb-1">Peak HR by Race — NOR vs PIA</h3>
+          <p className="text-[12px] text-muted-foreground mb-3">Max BPM per race</p>
           <div className="h-[280px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={mergedSeason}>
-                <CartesianGrid stroke="rgba(255,128,0,0.06)" />
+                <CartesianGrid stroke="rgba(255,128,0,0.12)" />
                 <XAxis dataKey="race" tick={{ fill: '#8888a0', fontSize: 8 }} angle={-45} textAnchor="end" height={60} interval={0} />
                 <YAxis tick={{ fill: '#8888a0', fontSize: 9 }} domain={['auto', 'auto']} />
                 <Tooltip content={<CustomTooltip />} />
@@ -1082,13 +1245,13 @@ function H2HSeasonView({ seasonNor, seasonPia, year }: { seasonNor: RaceSummary[
 
       {/* Battle + Temp comparison */}
       <div className="grid grid-cols-2 gap-3">
-        <div className="bg-[#12121e] border border-[rgba(255,128,0,0.08)] rounded-xl p-4">
-          <h3 className="text-xs text-foreground mb-1">Battle Intensity — NOR vs PIA</h3>
-          <p className="text-[10px] text-muted-foreground mb-3">Who races closer wheel-to-wheel?</p>
+        <div className="bg-[#1A1F2E] border border-[rgba(255,128,0,0.12)] rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.3)] p-4">
+          <h3 className="text-sm text-foreground mb-1">Battle Intensity — NOR vs PIA</h3>
+          <p className="text-[12px] text-muted-foreground mb-3">Who races closer wheel-to-wheel?</p>
           <div className="h-[280px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={mergedSeason}>
-                <CartesianGrid stroke="rgba(255,128,0,0.06)" />
+                <CartesianGrid stroke="rgba(255,128,0,0.12)" />
                 <XAxis dataKey="race" tick={{ fill: '#8888a0', fontSize: 8 }} angle={-45} textAnchor="end" height={60} interval={0} />
                 <YAxis tick={{ fill: '#8888a0', fontSize: 9 }} domain={[0, 'auto']} />
                 <Tooltip content={<CustomTooltip />} />
@@ -1099,13 +1262,13 @@ function H2HSeasonView({ seasonNor, seasonPia, year }: { seasonNor: RaceSummary[
           </div>
         </div>
 
-        <div className="bg-[#12121e] border border-[rgba(255,128,0,0.08)] rounded-xl p-4">
-          <h3 className="text-xs text-foreground mb-1">Cockpit Temperature — NOR vs PIA</h3>
-          <p className="text-[10px] text-muted-foreground mb-3">Avg cockpit temp per race</p>
+        <div className="bg-[#1A1F2E] border border-[rgba(255,128,0,0.12)] rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.3)] p-4">
+          <h3 className="text-sm text-foreground mb-1">Cockpit Temperature — NOR vs PIA</h3>
+          <p className="text-[12px] text-muted-foreground mb-3">Avg cockpit temp per race</p>
           <div className="h-[280px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={mergedSeason}>
-                <CartesianGrid stroke="rgba(255,128,0,0.06)" />
+                <CartesianGrid stroke="rgba(255,128,0,0.12)" />
                 <XAxis dataKey="race" tick={{ fill: '#8888a0', fontSize: 8 }} angle={-45} textAnchor="end" height={60} interval={0} />
                 <YAxis tick={{ fill: '#8888a0', fontSize: 9 }} />
                 <Tooltip content={<CustomTooltip />} />
@@ -1197,7 +1360,7 @@ function RaceVsRaceView({ driver, year, race1, race2, data1, data2 }: {
       </div>
 
       {/* Legend */}
-      <div className="flex items-center gap-4 text-[10px] text-muted-foreground px-1">
+      <div className="flex items-center gap-4 text-[12px] text-muted-foreground px-1">
         <span><span style={{ color: RACE1_COLOR }}>■</span> {race1} GP</span>
         <span><span style={{ color: RACE2_COLOR }}>■</span> {race2} GP</span>
       </div>
@@ -1205,13 +1368,13 @@ function RaceVsRaceView({ driver, year, race1, race2, data1, data2 }: {
       {/* HR and Battle overlay */}
       <div className="grid grid-cols-2 gap-3">
         {mergedHr.length > 0 && (
-          <div className="bg-[#12121e] border border-[rgba(255,128,0,0.08)] rounded-xl p-4">
-            <h3 className="text-xs text-foreground mb-1">Avg HR per Lap — {race1} vs {race2}</h3>
-            <p className="text-[10px] text-muted-foreground mb-3">{driver} — {year}</p>
+          <div className="bg-[#1A1F2E] border border-[rgba(255,128,0,0.12)] rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.3)] p-4">
+            <h3 className="text-sm text-foreground mb-1">Avg HR per Lap — {race1} vs {race2}</h3>
+            <p className="text-[12px] text-muted-foreground mb-3">{driver} — {year}</p>
             <div className="h-[260px]">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={mergedHr}>
-                  <CartesianGrid stroke="rgba(255,128,0,0.06)" />
+                  <CartesianGrid stroke="rgba(255,128,0,0.12)" />
                   <XAxis dataKey="lap" tick={{ fill: '#8888a0', fontSize: 9 }} />
                   <YAxis tick={{ fill: '#8888a0', fontSize: 9 }} domain={['auto', 'auto']} />
                   <Tooltip content={<CustomTooltip />} />
@@ -1223,13 +1386,13 @@ function RaceVsRaceView({ driver, year, race1, race2, data1, data2 }: {
           </div>
         )}
         {mergedBattle.length > 0 && (
-          <div className="bg-[#12121e] border border-[rgba(255,128,0,0.08)] rounded-xl p-4">
-            <h3 className="text-xs text-foreground mb-1">Battle Intensity — {race1} vs {race2}</h3>
-            <p className="text-[10px] text-muted-foreground mb-3">{driver} — {year}</p>
+          <div className="bg-[#1A1F2E] border border-[rgba(255,128,0,0.12)] rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.3)] p-4">
+            <h3 className="text-sm text-foreground mb-1">Battle Intensity — {race1} vs {race2}</h3>
+            <p className="text-[12px] text-muted-foreground mb-3">{driver} — {year}</p>
             <div className="h-[260px]">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={mergedBattle}>
-                  <CartesianGrid stroke="rgba(255,128,0,0.06)" />
+                  <CartesianGrid stroke="rgba(255,128,0,0.12)" />
                   <XAxis dataKey="lap" tick={{ fill: '#8888a0', fontSize: 9 }} />
                   <YAxis tick={{ fill: '#8888a0', fontSize: 9 }} domain={[0, 100]} />
                   <Tooltip content={<CustomTooltip />} />
@@ -1290,20 +1453,20 @@ function YearVsYearView({ driver, season23, season24 }: { driver: string; season
       </div>
 
       {/* Legend */}
-      <div className="flex items-center gap-4 text-[10px] text-muted-foreground px-1">
+      <div className="flex items-center gap-4 text-[12px] text-muted-foreground px-1">
         <span><span style={{ color: Y23_COLOR }}>■</span> 2023 Season</span>
         <span><span style={{ color: Y24_COLOR }}>■</span> 2024 Season</span>
         <span className="ml-auto">{commonRaces.length} common races compared</span>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <div className="bg-[#12121e] border border-[rgba(255,128,0,0.08)] rounded-xl p-4">
-          <h3 className="text-xs text-foreground mb-1">Avg HR by Race — 2023 vs 2024</h3>
-          <p className="text-[10px] text-muted-foreground mb-3">{driver} — common circuits</p>
+        <div className="bg-[#1A1F2E] border border-[rgba(255,128,0,0.12)] rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.3)] p-4">
+          <h3 className="text-sm text-foreground mb-1">Avg HR by Race — 2023 vs 2024</h3>
+          <p className="text-[12px] text-muted-foreground mb-3">{driver} — common circuits</p>
           <div className="h-[280px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={mergedCommon}>
-                <CartesianGrid stroke="rgba(255,128,0,0.06)" />
+                <CartesianGrid stroke="rgba(255,128,0,0.12)" />
                 <XAxis dataKey="race" tick={{ fill: '#8888a0', fontSize: 8 }} angle={-45} textAnchor="end" height={60} interval={0} />
                 <YAxis tick={{ fill: '#8888a0', fontSize: 9 }} domain={['auto', 'auto']} />
                 <Tooltip content={<CustomTooltip />} />
@@ -1314,13 +1477,13 @@ function YearVsYearView({ driver, season23, season24 }: { driver: string; season
           </div>
         </div>
 
-        <div className="bg-[#12121e] border border-[rgba(255,128,0,0.08)] rounded-xl p-4">
-          <h3 className="text-xs text-foreground mb-1">Peak HR by Race — 2023 vs 2024</h3>
-          <p className="text-[10px] text-muted-foreground mb-3">{driver} — common circuits</p>
+        <div className="bg-[#1A1F2E] border border-[rgba(255,128,0,0.12)] rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.3)] p-4">
+          <h3 className="text-sm text-foreground mb-1">Peak HR by Race — 2023 vs 2024</h3>
+          <p className="text-[12px] text-muted-foreground mb-3">{driver} — common circuits</p>
           <div className="h-[280px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={mergedCommon}>
-                <CartesianGrid stroke="rgba(255,128,0,0.06)" />
+                <CartesianGrid stroke="rgba(255,128,0,0.12)" />
                 <XAxis dataKey="race" tick={{ fill: '#8888a0', fontSize: 8 }} angle={-45} textAnchor="end" height={60} interval={0} />
                 <YAxis tick={{ fill: '#8888a0', fontSize: 9 }} domain={['auto', 'auto']} />
                 <Tooltip content={<CustomTooltip />} />
@@ -1333,13 +1496,13 @@ function YearVsYearView({ driver, season23, season24 }: { driver: string; season
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <div className="bg-[#12121e] border border-[rgba(255,128,0,0.08)] rounded-xl p-4">
-          <h3 className="text-xs text-foreground mb-1">Battle Intensity — 2023 vs 2024</h3>
-          <p className="text-[10px] text-muted-foreground mb-3">{driver} — common circuits</p>
+        <div className="bg-[#1A1F2E] border border-[rgba(255,128,0,0.12)] rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.3)] p-4">
+          <h3 className="text-sm text-foreground mb-1">Battle Intensity — 2023 vs 2024</h3>
+          <p className="text-[12px] text-muted-foreground mb-3">{driver} — common circuits</p>
           <div className="h-[280px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={mergedCommon}>
-                <CartesianGrid stroke="rgba(255,128,0,0.06)" />
+                <CartesianGrid stroke="rgba(255,128,0,0.12)" />
                 <XAxis dataKey="race" tick={{ fill: '#8888a0', fontSize: 8 }} angle={-45} textAnchor="end" height={60} interval={0} />
                 <YAxis tick={{ fill: '#8888a0', fontSize: 9 }} domain={[0, 'auto']} />
                 <Tooltip content={<CustomTooltip />} />
@@ -1350,13 +1513,13 @@ function YearVsYearView({ driver, season23, season24 }: { driver: string; season
           </div>
         </div>
 
-        <div className="bg-[#12121e] border border-[rgba(255,128,0,0.08)] rounded-xl p-4">
-          <h3 className="text-xs text-foreground mb-1">Cockpit Temp — 2023 vs 2024</h3>
-          <p className="text-[10px] text-muted-foreground mb-3">{driver} — common circuits</p>
+        <div className="bg-[#1A1F2E] border border-[rgba(255,128,0,0.12)] rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.3)] p-4">
+          <h3 className="text-sm text-foreground mb-1">Cockpit Temp — 2023 vs 2024</h3>
+          <p className="text-[12px] text-muted-foreground mb-3">{driver} — common circuits</p>
           <div className="h-[280px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={mergedCommon}>
-                <CartesianGrid stroke="rgba(255,128,0,0.06)" />
+                <CartesianGrid stroke="rgba(255,128,0,0.12)" />
                 <XAxis dataKey="race" tick={{ fill: '#8888a0', fontSize: 8 }} angle={-45} textAnchor="end" height={60} interval={0} />
                 <YAxis tick={{ fill: '#8888a0', fontSize: 9 }} />
                 <Tooltip content={<CustomTooltip />} />

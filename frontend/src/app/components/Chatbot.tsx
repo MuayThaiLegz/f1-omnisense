@@ -116,8 +116,8 @@ export function Chatbot() {
             <div className="w-7 h-7 rounded-lg bg-[#FF8000]/10 flex items-center justify-center shrink-0 mt-0.5">
               <Bot className="w-4 h-4 text-[#FF8000]" />
             </div>
-            <div className="bg-[#12121e] border border-[rgba(255,128,0,0.08)] rounded-xl px-4 py-3">
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <div className="bg-[#1A1F2E] border border-[rgba(255,128,0,0.12)] rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.3)] px-4 py-3">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Loader2 className="w-3 h-3 animate-spin text-[#FF8000]" />
                 Searching knowledge base...
               </div>
@@ -130,7 +130,7 @@ export function Chatbot() {
 
       {/* Input Area */}
       <div className="shrink-0 pt-3 border-t border-[rgba(255,128,0,0.12)]">
-        <div className="flex items-center gap-2 bg-[#12121e] border border-[rgba(255,128,0,0.12)] rounded-xl px-4 py-2 focus-within:border-[#FF8000]/40 transition-colors">
+        <div className="flex items-center gap-2 bg-[#1A1F2E] border border-[rgba(255,128,0,0.12)] rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.3)] px-4 py-2 focus-within:border-[#FF8000]/40 transition-colors">
           <input
             ref={inputRef}
             type="text"
@@ -138,7 +138,7 @@ export function Chatbot() {
             onChange={e => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Ask about F1 regulations, specs, equipment..."
-            className="flex-1 bg-transparent text-xs text-foreground placeholder:text-muted-foreground focus:outline-none"
+            className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
             disabled={loading}
           />
           <button
@@ -146,14 +146,14 @@ export function Chatbot() {
             disabled={!input.trim() || loading}
             className="w-7 h-7 rounded-lg bg-[#FF8000] flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[#FF8000]/80 transition-colors"
           >
-            <Send className="w-3.5 h-3.5 text-[#0a0a12]" />
+            <Send className="w-3.5 h-3.5 text-[#0D1117]" />
           </button>
         </div>
         <div className="flex items-center justify-between mt-2 px-1">
-          <span className="text-[9px] text-muted-foreground">
+          <span className="text-[11px] text-muted-foreground">
             Powered by Groq Llama 3.3 70B + Atlas Vector Search
           </span>
-          <span className="text-[9px] text-muted-foreground">
+          <span className="text-[11px] text-muted-foreground">
             {messages.filter(m => m.role === 'user').length} queries this session
           </span>
         </div>
@@ -178,7 +178,7 @@ function EmptyState({ onSelect }: { onSelect: (q: string) => void }) {
           <button
             key={q}
             onClick={() => onSelect(q)}
-            className="text-left text-[11px] text-muted-foreground bg-[#12121e] border border-[rgba(255,128,0,0.08)] rounded-xl px-3 py-2.5 hover:border-[#FF8000]/30 hover:text-foreground transition-all"
+            className="text-left text-[11px] text-muted-foreground bg-[#1A1F2E] border border-[rgba(255,128,0,0.12)] rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.3)] px-3 py-2.5 hover:border-[#FF8000]/30 hover:text-foreground transition-all"
           >
             {q}
           </button>
@@ -213,7 +213,7 @@ function MessageBubble({
         <div className={`rounded-xl px-4 py-3 text-[11px] leading-relaxed whitespace-pre-wrap ${
           isUser
             ? 'bg-blue-500/10 border border-blue-500/20 text-foreground'
-            : 'bg-[#12121e] border border-[rgba(255,128,0,0.08)] text-foreground'
+            : 'bg-[#1A1F2E] border border-[rgba(255,128,0,0.12)] text-foreground'
         }`}>
           {message.content}
         </div>
@@ -223,7 +223,7 @@ function MessageBubble({
           <div>
             <button
               onClick={onToggleSources}
-              className="text-[10px] text-[#FF8000] hover:text-[#FF8000]/80 flex items-center gap-1"
+              className="text-[12px] text-[#FF8000] hover:text-[#FF8000]/80 flex items-center gap-1"
             >
               <FileText className="w-3 h-3" />
               {expandedSources === index ? 'Hide' : 'Show'} {message.sources.length} sources
@@ -234,17 +234,17 @@ function MessageBubble({
                 {message.sources.map((src, si) => (
                   <div
                     key={si}
-                    className="bg-[#0d0d18] border border-[rgba(255,128,0,0.06)] rounded-lg px-3 py-2"
+                    className="bg-[#0D1117] border border-[rgba(255,128,0,0.12)] rounded-lg px-3 py-2"
                   >
                     <div className="flex items-center gap-2 mb-1">
                       <span className="text-[#FF8000]">
                         {typeIcons[src.data_type] || <FileText className="w-3 h-3" />}
                       </span>
-                      <span className="text-[9px] text-[#FF8000] font-mono">{src.data_type}</span>
-                      <span className="text-[9px] text-muted-foreground">/ {src.category}</span>
-                      <span className="text-[9px] text-muted-foreground ml-auto">p.{src.page}</span>
+                      <span className="text-[11px] text-[#FF8000] font-mono">{src.data_type}</span>
+                      <span className="text-[11px] text-muted-foreground">/ {src.category}</span>
+                      <span className="text-[11px] text-muted-foreground ml-auto">p.{src.page}</span>
                     </div>
-                    <p className="text-[10px] text-muted-foreground line-clamp-3">{src.content}</p>
+                    <p className="text-[12px] text-muted-foreground line-clamp-3">{src.content}</p>
                   </div>
                 ))}
               </div>

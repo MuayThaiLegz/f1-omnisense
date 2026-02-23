@@ -20,17 +20,17 @@ export function HealthGauge({ value, size = 120, label, showLabel = true, stroke
   }, [value]);
 
   const getColor = (v: number) => {
-    if (v >= 80) return '#22c55e';
+    if (v >= 80) return '#05DF72';
     if (v >= 60) return '#FF8000';
-    if (v >= 40) return '#f59e0b';
-    return '#ef4444';
+    if (v >= 40) return '#F59E0B';
+    return '#FB2C36';
   };
 
   const getGlow = (v: number) => {
-    if (v >= 80) return '0 0 12px rgba(34, 197, 94, 0.4)';
+    if (v >= 80) return '0 0 12px rgba(5, 223, 114, 0.4)';
     if (v >= 60) return '0 0 12px rgba(255, 128, 0, 0.4)';
     if (v >= 40) return '0 0 12px rgba(245, 158, 11, 0.4)';
-    return '0 0 12px rgba(239, 68, 68, 0.4)';
+    return '0 0 12px rgba(251, 44, 54, 0.4)';
   };
 
   return (
@@ -42,7 +42,7 @@ export function HealthGauge({ value, size = 120, label, showLabel = true, stroke
           className="transform -rotate-90"
           style={{ filter: `drop-shadow(${getGlow(value)})` }}
         >
-          <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="#1a1a2e" strokeWidth={strokeWidth} />
+          <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="#222838" strokeWidth={strokeWidth} />
           <circle
             cx={size / 2} cy={size / 2} r={radius} fill="none"
             stroke={getColor(value)} strokeWidth={strokeWidth} strokeLinecap="round"
@@ -57,7 +57,7 @@ export function HealthGauge({ value, size = 120, label, showLabel = true, stroke
         </div>
       </div>
       {showLabel && label && (
-        <span className="text-muted-foreground text-xs text-center leading-tight">{label}</span>
+        <span className="text-muted-foreground text-sm text-center leading-tight">{label}</span>
       )}
     </div>
   );

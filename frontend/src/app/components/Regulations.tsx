@@ -98,11 +98,11 @@ export function Regulations() {
             placeholder="Search regulations, dimensions, equipment..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full bg-[#12121e] border border-[rgba(255,128,0,0.12)] rounded-lg pl-10 pr-4 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-[#FF8000]/40"
+            className="w-full bg-[#1A1F2E] border border-[rgba(255,128,0,0.12)] rounded-lg pl-10 pr-4 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-[#FF8000]/40"
           />
         </div>
         {/* Tabs */}
-        <div className="flex items-center bg-[#12121e] border border-[rgba(255,128,0,0.12)] rounded-lg overflow-hidden">
+        <div className="flex items-center bg-[#1A1F2E] border border-[rgba(255,128,0,0.12)] rounded-lg overflow-hidden">
           {([
             { id: 'rules' as TabType, label: 'Rules', icon: <BookOpen className="w-3 h-3" />, count: data.stats?.total_rules ?? 0 },
             { id: 'dimensions' as TabType, label: 'Dimensions', icon: <Ruler className="w-3 h-3" />, count: data.stats?.total_dimensions ?? 0 },
@@ -111,7 +111,7 @@ export function Regulations() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-1.5 px-3 py-2 text-[10px] transition-colors ${
+              className={`flex items-center gap-1.5 px-3 py-2 text-[12px] transition-colors ${
                 activeTab === tab.id
                   ? 'bg-[#FF8000]/10 text-[#FF8000]'
                   : 'text-muted-foreground hover:text-foreground'
@@ -119,7 +119,7 @@ export function Regulations() {
             >
               {tab.icon}
               {tab.label}
-              <span className="font-mono text-[9px]">({tab.count})</span>
+              <span className="font-mono text-[11px]">({tab.count})</span>
             </button>
           ))}
         </div>
@@ -133,10 +133,10 @@ export function Regulations() {
             <button
               key={cat}
               onClick={() => setSelectedCategory(cat)}
-              className={`text-[10px] px-2 py-1 rounded-lg whitespace-nowrap transition-all ${
+              className={`text-[12px] px-2 py-1 rounded-lg whitespace-nowrap transition-all ${
                 selectedCategory === cat
                   ? 'bg-[#FF8000]/10 text-[#FF8000]'
-                  : 'text-muted-foreground hover:bg-[#1a1a2e] hover:text-foreground'
+                  : 'text-muted-foreground hover:bg-[#222838] hover:text-foreground'
               }`}
             >
               {cat === 'all' ? 'All Categories' : cat}
@@ -146,7 +146,7 @@ export function Regulations() {
       )}
 
       {/* Results count */}
-      <div className="text-[10px] text-muted-foreground">
+      <div className="text-[12px] text-muted-foreground">
         {activeTab === 'rules' && `${filteredRules.length} regulation${filteredRules.length !== 1 ? 's' : ''}`}
         {activeTab === 'dimensions' && `${filteredDimensions.length} dimensional spec${filteredDimensions.length !== 1 ? 's' : ''}`}
         {activeTab === 'equipment' && `${filteredEquipment.length} equipment item${filteredEquipment.length !== 1 ? 's' : ''}`}
@@ -165,31 +165,31 @@ export function Regulations() {
             />
           ))}
           {filteredRules.length > 100 && (
-            <div className="text-center text-[10px] text-muted-foreground py-2">
+            <div className="text-center text-[12px] text-muted-foreground py-2">
               Showing 100 of {filteredRules.length} — refine your search to see more
             </div>
           )}
           {filteredRules.length === 0 && (
-            <div className="text-center text-muted-foreground text-xs py-8">No rules match your filters</div>
+            <div className="text-center text-muted-foreground text-sm py-8">No rules match your filters</div>
           )}
         </div>
       )}
 
       {/* Dimensions Tab */}
       {activeTab === 'dimensions' && (
-        <div className="bg-[#12121e] border border-[rgba(255,128,0,0.08)] rounded-xl overflow-hidden">
+        <div className="bg-[#1A1F2E] border border-[rgba(255,128,0,0.12)] rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.3)] overflow-hidden">
           <table className="w-full text-[11px]">
             <thead>
-              <tr className="border-b border-[rgba(255,128,0,0.08)]">
-                <th className="text-left text-muted-foreground font-normal px-4 py-2 tracking-wider text-[9px]">COMPONENT</th>
-                <th className="text-left text-muted-foreground font-normal px-4 py-2 tracking-wider text-[9px]">DIMENSION</th>
-                <th className="text-right text-muted-foreground font-normal px-4 py-2 tracking-wider text-[9px]">VALUE</th>
-                <th className="text-right text-muted-foreground font-normal px-4 py-2 tracking-wider text-[9px]">PAGE</th>
+              <tr className="border-b border-[rgba(255,128,0,0.12)]">
+                <th className="text-left text-muted-foreground font-normal px-4 py-2 tracking-wider text-[11px]">COMPONENT</th>
+                <th className="text-left text-muted-foreground font-normal px-4 py-2 tracking-wider text-[11px]">DIMENSION</th>
+                <th className="text-right text-muted-foreground font-normal px-4 py-2 tracking-wider text-[11px]">VALUE</th>
+                <th className="text-right text-muted-foreground font-normal px-4 py-2 tracking-wider text-[11px]">PAGE</th>
               </tr>
             </thead>
             <tbody>
               {filteredDimensions.slice(0, 80).map((dim, i) => (
-                <tr key={i} className="border-b border-[rgba(255,128,0,0.04)] hover:bg-[#1a1a2e] transition-colors">
+                <tr key={i} className="border-b border-[rgba(255,128,0,0.04)] hover:bg-[#222838] transition-colors">
                   <td className="px-4 py-1.5 text-foreground">{dim.component}</td>
                   <td className="px-4 py-1.5 text-muted-foreground truncate max-w-[300px]">{dim.dimension}</td>
                   <td className="px-4 py-1.5 text-right font-mono text-[#FF8000]">
@@ -201,7 +201,7 @@ export function Regulations() {
             </tbody>
           </table>
           {filteredDimensions.length > 80 && (
-            <div className="text-center text-[10px] text-muted-foreground py-2">
+            <div className="text-center text-[12px] text-muted-foreground py-2">
               Showing 80 of {filteredDimensions.length}
             </div>
           )}
@@ -212,22 +212,22 @@ export function Regulations() {
       {activeTab === 'equipment' && (
         <div className="grid grid-cols-2 gap-2">
           {filteredEquipment.slice(0, 60).map((eq, i) => (
-            <div key={i} className="bg-[#12121e] border border-[rgba(255,128,0,0.08)] rounded-xl p-3">
+            <div key={i} className="bg-[#1A1F2E] border border-[rgba(255,128,0,0.12)] rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.3)] p-3">
               <div className="flex items-center gap-2 mb-1">
                 <Hash className="w-3 h-3 text-[#FF8000]" />
-                <span className="text-xs font-mono text-[#FF8000]">{eq.tag}</span>
+                <span className="text-sm font-mono text-[#FF8000]">{eq.tag}</span>
               </div>
               <div className="text-[11px] text-foreground">{eq.type}</div>
               {eq.description && (
-                <div className="text-[10px] text-muted-foreground mt-1 line-clamp-2">{eq.description}</div>
+                <div className="text-[12px] text-muted-foreground mt-1 line-clamp-2">{eq.description}</div>
               )}
               {eq.location_description && (
-                <div className="text-[10px] text-cyan-400 mt-1">{eq.location_description}</div>
+                <div className="text-[12px] text-cyan-400 mt-1">{eq.location_description}</div>
               )}
             </div>
           ))}
           {filteredEquipment.length === 0 && (
-            <div className="col-span-2 text-center text-muted-foreground text-xs py-8">No equipment matches</div>
+            <div className="col-span-2 text-center text-muted-foreground text-sm py-8">No equipment matches</div>
           )}
         </div>
       )}
@@ -247,31 +247,31 @@ function RuleCard({ rule, expanded, onToggle }: {
     : 'text-cyan-400 bg-cyan-500/10';
 
   return (
-    <div className="bg-[#12121e] border border-[rgba(255,128,0,0.08)] rounded-xl overflow-hidden">
+    <div className="bg-[#1A1F2E] border border-[rgba(255,128,0,0.12)] rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.3)] overflow-hidden">
       <button
         onClick={onToggle}
-        className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-[#1a1a2e] transition-colors"
+        className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-[#222838] transition-colors"
       >
         {expanded
           ? <ChevronDown className="w-3 h-3 text-[#FF8000] shrink-0" />
           : <ChevronRight className="w-3 h-3 text-muted-foreground shrink-0" />
         }
-        <span className="text-[10px] font-mono text-[#FF8000] w-14 shrink-0">{rule.id}</span>
-        <span className="text-[10px] px-1.5 py-0.5 rounded-full shrink-0 tracking-wider text-[9px] uppercase ${severityColor}">
+        <span className="text-[12px] font-mono text-[#FF8000] w-14 shrink-0">{rule.id}</span>
+        <span className="text-[12px] px-1.5 py-0.5 rounded-full shrink-0 tracking-wider text-[11px] uppercase ${severityColor}">
           <span className={`${severityColor} px-1.5 py-0.5 rounded-full`}>{rule.severity}</span>
         </span>
         <span className="text-[11px] text-foreground flex-1 truncate">
           {rule.description || rule.category}
         </span>
-        <span className="text-[10px] text-muted-foreground shrink-0">{rule.category}</span>
+        <span className="text-[12px] text-muted-foreground shrink-0">{rule.category}</span>
       </button>
 
       {expanded && (
-        <div className="px-4 pb-3 pt-1 border-t border-[rgba(255,128,0,0.06)] space-y-2">
+        <div className="px-4 pb-3 pt-1 border-t border-[rgba(255,128,0,0.12)] space-y-2">
           {rule.description && (
             <p className="text-[11px] text-muted-foreground leading-relaxed">{rule.description}</p>
           )}
-          <div className="flex items-center gap-4 text-[10px]">
+          <div className="flex items-center gap-4 text-[12px]">
             {rule.value && (
               <div>
                 <span className="text-muted-foreground">Value: </span>

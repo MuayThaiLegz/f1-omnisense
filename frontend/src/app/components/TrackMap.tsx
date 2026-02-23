@@ -268,30 +268,30 @@ export function TrackMap({
 
   if (loading) {
     return (
-      <div className={`flex items-center justify-center bg-[#0a0a12] rounded-lg ${className}`} style={{ height }}>
-        <span className="text-[10px] text-muted-foreground animate-pulse">Loading track...</span>
+      <div className={`flex items-center justify-center bg-[#0D1117] rounded-lg ${className}`} style={{ height }}>
+        <span className="text-[12px] text-muted-foreground animate-pulse">Loading track...</span>
       </div>
     );
   }
 
   if (projected.length === 0) {
     return (
-      <div className={`flex items-center justify-center bg-[#0a0a12] rounded-lg ${className}`} style={{ height }}>
-        <span className="text-[10px] text-muted-foreground">No track data</span>
+      <div className={`flex items-center justify-center bg-[#0D1117] rounded-lg ${className}`} style={{ height }}>
+        <span className="text-[12px] text-muted-foreground">No track data</span>
       </div>
     );
   }
 
   return (
-    <div className={`bg-[#0a0a12] rounded-lg border border-[rgba(255,128,0,0.08)] overflow-hidden relative ${className}`}>
+    <div className={`bg-[#0D1117] rounded-lg border border-[rgba(255,128,0,0.12)] overflow-hidden relative ${className}`}>
       {/* Header */}
-      <div className="flex items-center justify-between px-3 py-2 border-b border-[rgba(255,128,0,0.06)]">
+      <div className="flex items-center justify-between px-3 py-2 border-b border-[rgba(255,128,0,0.12)]">
         <div className="flex items-center gap-2">
           <MapPin className="w-3.5 h-3.5" style={{ color: accentColor }} />
           <span className="text-[11px] font-semibold text-foreground tracking-wide">{circuitName}</span>
         </div>
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 text-[9px] text-muted-foreground">
+          <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
             <span>{locality}, {country}</span>
             <span className="font-mono">{lengthKm} km</span>
           </div>
@@ -301,7 +301,7 @@ export function TrackMap({
               {['S1', 'S2', 'S3'].map((s, i) => (
                 <div key={s} className="flex items-center gap-0.5">
                   <div className="w-2 h-2 rounded-full" style={{ backgroundColor: SECTOR_COLORS[i] }} />
-                  <span className="text-[8px] text-muted-foreground">{s}</span>
+                  <span className="text-[10px] text-muted-foreground">{s}</span>
                 </div>
               ))}
             </div>
@@ -310,7 +310,7 @@ export function TrackMap({
           {zoom !== 1 && (
             <button
               onClick={resetView}
-              className="flex items-center gap-1 px-1.5 py-0.5 text-[8px] text-muted-foreground bg-[rgba(255,255,255,0.05)] rounded hover:bg-[rgba(255,255,255,0.1)] transition-colors"
+              className="flex items-center gap-1 px-1.5 py-0.5 text-[10px] text-muted-foreground bg-[rgba(255,255,255,0.05)] rounded hover:bg-[rgba(255,255,255,0.1)] transition-colors"
             >
               <Maximize2 className="w-2.5 h-2.5" />
               Reset
@@ -361,7 +361,7 @@ export function TrackMap({
           <path
             d={fullPathD}
             fill="none"
-            stroke="#1a1a2e"
+            stroke="#222838"
             strokeWidth="14"
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -501,7 +501,7 @@ export function TrackMap({
                 width="20"
                 height="10"
                 rx="2"
-                fill="#0a0a12"
+                fill="#0D1117"
                 fillOpacity="0.8"
                 stroke={DRS_COLOR}
                 strokeWidth="0.5"
@@ -571,7 +571,7 @@ export function TrackMap({
               }}
               onMouseLeave={() => setHoveredTurn(null)}
             >
-              <circle cx={turn.px} cy={turn.py} r="6" fill="#0a0a12" fillOpacity="0.7" />
+              <circle cx={turn.px} cy={turn.py} r="6" fill="#0D1117" fillOpacity="0.7" />
               <circle cx={turn.px} cy={turn.py} r="5" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="0.8" />
               <text
                 x={turn.px}
@@ -598,7 +598,7 @@ export function TrackMap({
                 cy={car.py}
                 r="4.5"
                 fill={car.color}
-                stroke="#0a0a12"
+                stroke="#0D1117"
                 strokeWidth="1.2"
                 style={{ transition: 'cx 0.5s ease-out, cy 0.5s ease-out' }}
               />
@@ -609,7 +609,7 @@ export function TrackMap({
                 width={car.code.length * 5 + 8}
                 height="10"
                 rx="2"
-                fill="#0a0a12"
+                fill="#0D1117"
                 fillOpacity="0.75"
               />
               {/* Label */}
@@ -638,11 +638,11 @@ export function TrackMap({
             transform: 'translateX(-50%)',
           }}
         >
-          <div className="bg-[#12121e] border border-[rgba(255,128,0,0.2)] rounded-lg px-3 py-2 shadow-xl">
-            <div className="text-[10px] font-semibold text-foreground">
+          <div className="bg-[#1A1F2E] border border-[rgba(255,128,0,0.2)] rounded-lg px-3 py-2 shadow-xl">
+            <div className="text-[12px] font-semibold text-foreground">
               T{hoveredTurn.number} — {hoveredTurn.name || `Turn ${hoveredTurn.number}`}
             </div>
-            <div className="flex gap-3 mt-1 text-[9px] text-muted-foreground">
+            <div className="flex gap-3 mt-1 text-[11px] text-muted-foreground">
               {hoveredTurn.gear && (
                 <span>Gear: <span className="text-cyan-400 font-mono">{hoveredTurn.gear}</span></span>
               )}
@@ -664,7 +664,7 @@ export function TrackMap({
               const evt = new CustomEvent('trackmap-colormode', { detail: mode });
               window.dispatchEvent(evt);
             }}
-            className={`px-1.5 py-0.5 text-[7px] rounded font-mono transition-colors ${
+            className={`px-1.5 py-0.5 text-[9px] rounded font-mono transition-colors ${
               colorMode === mode
                 ? 'bg-[rgba(255,128,0,0.15)] text-[#FF8000]'
                 : 'bg-[rgba(255,255,255,0.03)] text-muted-foreground hover:bg-[rgba(255,255,255,0.06)]'
@@ -677,7 +677,7 @@ export function TrackMap({
 
       {/* Zoom indicator */}
       {zoom !== 1 && (
-        <div className="absolute bottom-2 left-2 text-[8px] text-muted-foreground font-mono bg-[rgba(0,0,0,0.5)] px-1.5 py-0.5 rounded">
+        <div className="absolute bottom-2 left-2 text-[10px] text-muted-foreground font-mono bg-[rgba(0,0,0,0.5)] px-1.5 py-0.5 rounded">
           {Math.round(zoom * 100)}%
         </div>
       )}
