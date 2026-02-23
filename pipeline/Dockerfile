@@ -18,6 +18,7 @@ COPY pipeline/requirements.txt /tmp/requirements.txt
 RUN pip install --no-cache-dir -r /tmp/requirements.txt
 
 # Copy pipeline source
+ARG SOURCE_BUST=v2
 COPY pipeline/ /app/pipeline/
 
 EXPOSE 8100
