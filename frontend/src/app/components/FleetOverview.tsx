@@ -99,11 +99,10 @@ const levelBg = (l: HealthLevel) =>
   l === 'nominal' ? 'rgba(34,197,94,0.08)' : l === 'warning' ? 'rgba(255,128,0,0.08)' : 'rgba(239,68,68,0.08)';
 
 
-// 3D car models — mapped per driver number
-// Available: mcl38.glb (2024), mcl39.glb (2025), mcl60.glb (2023)
+// 3D car models — served from MongoDB GridFS via backend
 const DRIVER_CAR_MODEL: Record<number, { label: string; url: string }> = {
-  4:  { label: 'MCL38', url: '/models/unpacked/unpacked-mclaren_mcl38_lod_a.glb' },   // NOR — 2024 car
-  81: { label: 'MCL39', url: '/models/unpacked/f1_2025_mclaren_mcl39.glb' },            // PIA — 2025 car
+  4:  { label: 'MCL38', url: '/api/models/unpacked-mclaren_mcl38_lod_a.glb' },   // NOR — 2024 car
+  81: { label: 'MCL39', url: '/api/models/f1_2025_mclaren_mcl39.glb' },            // PIA — 2025 car
 };
 
 // NOTE: Car3DViewer standalone section removed from fleet grid view.

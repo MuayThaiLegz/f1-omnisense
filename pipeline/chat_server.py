@@ -142,24 +142,57 @@ You are speaking with F1 engineers and technical staff — use appropriate techn
 
 # ── RAG Pipeline ─────────────────────────────────────────────────────────
 
-def retrieve_context(query: str, k: int = 8) -> list[dict]:
-    """Embed query and retrieve relevant documents from Atlas."""
-    embedder = get_embedder()
+def _text_search_fallback(query: str, k: int = 8) -> list[dict]:
+    """Fallback: keyword search on f1_knowledge when vector search is unavailable."""
     vs = get_vs()
-
-    query_vec = embedder.embed([query])[0]
-    docs = vs.similarity_search(query, k=k, query_embedding=query_vec)
-
+    coll = vs.collection
+    keywords = [w for w in query.split() if len(w) > 2]
+    if not keywords:
+        keywords = query.split()
+    regex = "|".join(keywords)
+    try:
+        results = list(
+            coll.find(
+                {"page_content": {"$regex": regex, "$options": "i"}},
+                {"page_content": 1, "metadata": 1, "_id": 0},
+            ).limit(k)
+        )
+    except Exception:
+        results = list(coll.find({}, {"page_content": 1, "metadata": 1, "_id": 0}).limit(k))
     sources = []
-    for doc in docs:
+    for r in results:
+        meta = r.get("metadata", {})
         sources.append({
-            "content": doc.page_content,
-            "data_type": doc.metadata.get("data_type", ""),
-            "category": doc.metadata.get("category", ""),
-            "source": doc.metadata.get("source", ""),
-            "page": doc.metadata.get("page", 0),
+            "content": r.get("page_content", ""),
+            "data_type": meta.get("data_type", ""),
+            "category": meta.get("category", ""),
+            "source": meta.get("source", ""),
+            "page": meta.get("page", 0),
         })
     return sources
+
+
+def retrieve_context(query: str, k: int = 8) -> list[dict]:
+    """Embed query and retrieve relevant documents from Atlas.
+    Falls back to text search if embedding/vector search fails."""
+    try:
+        embedder = get_embedder()
+        vs = get_vs()
+        query_vec = embedder.embed([query])[0]
+        docs = vs.similarity_search(query, k=k, query_embedding=query_vec)
+        sources = []
+        for doc in docs:
+            sources.append({
+                "content": doc.page_content,
+                "data_type": doc.metadata.get("data_type", ""),
+                "category": doc.metadata.get("category", ""),
+                "source": doc.metadata.get("source", ""),
+                "page": doc.metadata.get("page", 0),
+            })
+        return sources
+    except Exception as e:
+        print(f"  Vector search failed ({e}), falling back to text search")
+        return _text_search_fallback(query, k)
 
 
 def build_rag_prompt(query: str, sources: list[dict], history: list[ChatMessage]) -> list[dict]:
@@ -674,21 +707,39 @@ async def pipeline_timesformer():
     return {}
 
 def _build_session_map():
-    """Build mapping from _source_file → session_key and race name → session_key."""
+    """Build mapping from _source_file → session_key and (year, race) → session_key.
+
+    Returns (src_to_key, year_race_to_key) where year_race_to_key keys are
+    ``"YYYY|Race Name"`` strings so that 2023 and 2024 races get distinct
+    session keys.
+    """
     db = get_data_db()
     sources = db["telemetry"].distinct("_source_file")
     src_to_key = {}
-    race_to_key = {}
+    year_race_to_key = {}  # "2024|Monaco Grand Prix" → session_key
     session_key = 9000
     for src in sorted(sources):
         parts = src.replace(".csv", "").split("_")
         if len(parts) < 3:
             continue
+        year = parts[0]
         race_name = " ".join(parts[1:]).replace(" Race", "")
         src_to_key[src] = session_key
-        race_to_key[race_name] = session_key
+        year_race_to_key[f"{year}|{race_name}"] = session_key
         session_key += 1
-    return src_to_key, race_to_key
+    return src_to_key, year_race_to_key
+
+
+def _resolve_sk(year_race_to_key: dict, year: str, race: str) -> int:
+    """Look up session_key for a (year, race) pair with fallbacks."""
+    key = f"{year}|{race}"
+    if key in year_race_to_key:
+        return year_race_to_key[key]
+    # Try adding "Grand Prix" suffix
+    key2 = f"{year}|{race} Grand Prix"
+    if key2 in year_race_to_key:
+        return year_race_to_key[key2]
+    return 9000
 
 _DRIVER_NUMBERS = {"NOR": 4, "PIA": 81}
 _DRIVER_META = {
@@ -707,19 +758,29 @@ async def openf1_sessions():
     sources = db["telemetry"].distinct("_source_file")
     sessions = []
     session_key = 9000
+    # Assign race index within each year for date spacing
+    race_idx = 0
+    prev_year = None
     for src in sorted(sources):
         parts = src.replace(".csv", "").split("_")
         if len(parts) < 3:
             continue
         year = parts[0]
+        if year != prev_year:
+            race_idx = 0
+            prev_year = year
         race_name = " ".join(parts[1:]).replace(" Race", "")
         circuit_short = parts[1] if len(parts) > 1 else "Unknown"
+        # Space sessions ~2 weeks apart so they sort chronologically
+        month = 3 + race_idx  # Start from March
+        if month > 12:
+            month = 12
         sessions.append({
             "session_key": session_key,
             "session_name": "Race",
             "session_type": "Race",
-            "date_start": f"{year}-01-01T14:00:00",
-            "date_end": f"{year}-01-01T16:00:00",
+            "date_start": f"{year}-{month:02d}-15T14:00:00",
+            "date_end": f"{year}-{month:02d}-15T16:00:00",
             "year": int(year),
             "circuit_key": session_key,
             "circuit_short_name": circuit_short,
@@ -727,18 +788,19 @@ async def openf1_sessions():
             "country_key": session_key,
             "location": circuit_short,
             "meeting_key": session_key,
-            "meeting_name": race_name,
+            "meeting_name": f"{year} {race_name}",
             "_source_file": src,
         })
         session_key += 1
+        race_idx += 1
     return sessions
 
 @app.get("/api/local/openf1/drivers")
 async def openf1_drivers():
     """Generate OpenF1-format driver data for all sessions."""
-    _, race_to_key = _build_session_map()
+    _, yr_to_key = _build_session_map()
     drivers = []
-    for sk in race_to_key.values():
+    for sk in yr_to_key.values():
         for code, meta in _DRIVER_META.items():
             drivers.append({
                 "session_key": sk, "meeting_key": sk,
@@ -759,26 +821,27 @@ async def openf1_drivers():
 async def openf1_laps():
     """Generate OpenF1-format lap data from telemetry."""
     db = get_data_db()
-    _, race_to_key = _build_session_map()
+    _, yr_to_key = _build_session_map()
     pipeline_agg = [
         {"$group": {
-            "_id": {"Driver": "$Driver", "Race": "$Race", "LapNumber": "$LapNumber"},
+            "_id": {"Driver": "$Driver", "Year": "$Year", "Race": "$Race", "LapNumber": "$LapNumber"},
             "lap_time": {"$first": "$LapTime"},
             "top_speed": {"$max": "$Speed"},
             "date": {"$first": "$Date"},
         }},
-        {"$sort": {"_id.Race": 1, "_id.LapNumber": 1}},
+        {"$sort": {"_id.Year": 1, "_id.Race": 1, "_id.LapNumber": 1}},
     ]
     results = list(db["telemetry"].aggregate(pipeline_agg, allowDiskUse=True))
     laps = []
     for r in results:
         ident = r["_id"]
         driver = ident.get("Driver", "")
+        year = ident.get("Year", "")
         race = ident.get("Race", "")
         lap_num = ident.get("LapNumber")
         if lap_num is None:
             continue
-        sk = race_to_key.get(race, race_to_key.get(race + " Grand Prix", 9000))
+        sk = _resolve_sk(yr_to_key, year, race)
         lap_duration = None
         lt = r.get("lap_time", "")
         if lt and "days" in str(lt):
@@ -804,31 +867,32 @@ async def openf1_laps():
 async def openf1_positions():
     """Generate OpenF1-format position data from telemetry."""
     db = get_data_db()
-    _, race_to_key = _build_session_map()
+    _, yr_to_key = _build_session_map()
     pipeline_agg = [
         {"$group": {
-            "_id": {"Driver": "$Driver", "Race": "$Race", "LapNumber": "$LapNumber"},
+            "_id": {"Driver": "$Driver", "Year": "$Year", "Race": "$Race", "LapNumber": "$LapNumber"},
             "date": {"$last": "$Date"},
         }},
-        {"$sort": {"_id.Race": 1, "_id.LapNumber": 1}},
+        {"$sort": {"_id.Year": 1, "_id.Race": 1, "_id.LapNumber": 1}},
     ]
     results = list(db["telemetry"].aggregate(pipeline_agg, allowDiskUse=True))
     from collections import defaultdict
     lap_groups = defaultdict(list)
     for r in results:
         ident = r["_id"]
+        year = ident.get("Year", "")
         race = ident.get("Race", "")
-        key = f'{race}_{ident.get("LapNumber", 0)}'
+        key = f'{year}_{race}_{ident.get("LapNumber", 0)}'
         lap_groups[key].append({
             "driver": ident.get("Driver", ""),
             "date": r.get("date", ""),
+            "year": year,
             "race": race,
         })
     positions = []
     for key, drivers_in_lap in lap_groups.items():
         for pos_idx, d in enumerate(drivers_in_lap):
-            race = d["race"]
-            sk = race_to_key.get(race, race_to_key.get(race + " Grand Prix", 9000))
+            sk = _resolve_sk(yr_to_key, d["year"], d["race"])
             positions.append({
                 "session_key": sk, "meeting_key": sk,
                 "driver_number": _DRIVER_NUMBERS.get(d["driver"], 0),
@@ -840,12 +904,13 @@ async def openf1_positions():
 @app.get("/api/local/openf1/weather")
 async def openf1_weather():
     """Return weather data for all sessions."""
-    _, race_to_key = _build_session_map()
+    _, yr_to_key = _build_session_map()
     weather = []
-    for race, sk in race_to_key.items():
+    for yr_race, sk in yr_to_key.items():
+        year = yr_race.split("|")[0]
         weather.append({
             "session_key": sk, "meeting_key": sk,
-            "date": "2024-01-01T14:00:00", "air_temperature": 25.0,
+            "date": f"{year}-06-01T14:00:00", "air_temperature": 25.0,
             "track_temperature": 40.0, "humidity": 55, "pressure": 1013.0,
             "rainfall": False, "wind_direction": 180, "wind_speed": 3.5,
         })
@@ -859,11 +924,11 @@ async def openf1_intervals():
 async def openf1_pit():
     """Generate pit stop data from telemetry stint boundaries."""
     db = get_data_db()
-    _, race_to_key = _build_session_map()
+    _, yr_to_key = _build_session_map()
     pipeline_agg = [
         {"$match": {"Compound": {"$ne": None}}},
         {"$group": {
-            "_id": {"Driver": "$Driver", "Race": "$Race", "Compound": "$Compound"},
+            "_id": {"Driver": "$Driver", "Year": "$Year", "Race": "$Race", "Compound": "$Compound"},
             "min_lap": {"$min": "$LapNumber"},
         }},
         {"$sort": {"_id.Race": 1, "_id.Driver": 1, "min_lap": 1}},
@@ -873,9 +938,10 @@ async def openf1_pit():
     driver_race_stints = defaultdict(list)
     for r in results:
         ident = r["_id"]
-        key = f'{ident["Driver"]}_{ident["Race"]}'
+        key = f'{ident["Year"]}_{ident["Driver"]}_{ident["Race"]}'
         driver_race_stints[key].append({
             "driver": ident["Driver"],
+            "year": ident.get("Year", ""),
             "race": ident["Race"],
             "min_lap": r.get("min_lap", 0) or 0,
         })
@@ -884,8 +950,9 @@ async def openf1_pit():
         stints.sort(key=lambda s: s["min_lap"])
         for i in range(1, len(stints)):
             driver = stints[i]["driver"]
+            year = stints[i]["year"]
             race = stints[i]["race"]
-            sk = race_to_key.get(race, race_to_key.get(race + " Grand Prix", 9000))
+            sk = _resolve_sk(yr_to_key, year, race)
             pits.append({
                 "session_key": sk, "meeting_key": sk,
                 "driver_number": _DRIVER_NUMBERS.get(driver, 0),
@@ -898,16 +965,16 @@ async def openf1_pit():
 async def openf1_stints():
     """Generate stint data from telemetry."""
     db = get_data_db()
-    _, race_to_key = _build_session_map()
+    _, yr_to_key = _build_session_map()
     pipeline_agg = [
         {"$match": {"Compound": {"$ne": None}}},
         {"$group": {
-            "_id": {"Driver": "$Driver", "Race": "$Race", "Compound": "$Compound"},
+            "_id": {"Driver": "$Driver", "Year": "$Year", "Race": "$Race", "Compound": "$Compound"},
             "start_lap": {"$min": "$LapNumber"},
             "end_lap": {"$max": "$LapNumber"},
             "tyre_life": {"$min": "$TyreLife"},
         }},
-        {"$sort": {"_id.Race": 1, "_id.Driver": 1, "start_lap": 1}},
+        {"$sort": {"_id.Year": 1, "_id.Race": 1, "_id.Driver": 1, "start_lap": 1}},
     ]
     results = list(db["telemetry"].aggregate(pipeline_agg, allowDiskUse=True))
     stints = []
@@ -916,10 +983,11 @@ async def openf1_stints():
     for r in results:
         ident = r["_id"]
         driver = ident.get("Driver", "")
+        year = ident.get("Year", "")
         race = ident.get("Race", "")
-        key = f"{driver}_{race}"
+        key = f"{year}_{driver}_{race}"
         stint_counter[key] += 1
-        sk = race_to_key.get(race, race_to_key.get(race + " Grand Prix", 9000))
+        sk = _resolve_sk(yr_to_key, year, race)
         stints.append({
             "session_key": sk, "meeting_key": sk,
             "driver_number": _DRIVER_NUMBERS.get(driver, 0),
@@ -934,11 +1002,12 @@ async def openf1_stints():
 @app.get("/api/local/openf1/race_control")
 async def openf1_race_control():
     """Return race control events for all sessions."""
-    _, race_to_key = _build_session_map()
+    _, yr_to_key = _build_session_map()
     events = []
-    for race, sk in race_to_key.items():
+    for yr_race, sk in yr_to_key.items():
+        year = yr_race.split("|")[0]
         events.append({
-            "date": "2024-01-01T14:00:00", "session_key": sk, "meeting_key": sk,
+            "date": f"{year}-06-01T14:00:00", "session_key": sk, "meeting_key": sk,
             "driver_number": None, "lap_number": 1, "category": "Flag",
             "flag": "GREEN", "scope": "Track", "message": "GREEN LIGHT - PIT EXIT OPEN",
         })
@@ -1093,6 +1162,29 @@ def _telemetry_to_csv(docs: list[dict]) -> str:
         lines.append(",".join(row))
     return "\n".join(lines)
 
+
+def _biometrics_to_csv(docs: list[dict]) -> str:
+    """Convert biometrics documents to CSV string."""
+    if not docs:
+        return ""
+    headers = ["Date", "RPM", "Speed", "nGear", "Throttle", "Brake", "DRS",
+               "Source", "Time", "SessionTime", "Distance", "Driver", "Year",
+               "Race", "LapNumber", "LapTime", "Compound", "TyreLife",
+               "HeartRate_bpm", "CockpitTemp_C", "AirTemp_C", "TrackTemp_C",
+               "Humidity_pct", "BattleIntensity"]
+    lines = [",".join(headers)]
+    for d in docs:
+        row = []
+        for h in headers:
+            val = d.get(h, "")
+            s = str(val) if val is not None else ""
+            if "," in s:
+                s = f'"{s}"'
+            row.append(s)
+        lines.append(",".join(row))
+    return "\n".join(lines)
+
+
 @app.get("/api/local/mccar/{year}/{filename}")
 async def mccar_csv(year: str, filename: str):
     """Serve telemetry as CSV for a specific race."""
@@ -1108,15 +1200,27 @@ async def mccar_csv(year: str, filename: str):
 
 @app.get("/api/local/mcdriver/{year}/{filename}")
 async def mcdriver_csv(year: str, filename: str):
-    """Serve driver telemetry as CSV (same data, frontend filters by driver)."""
+    """Serve driver biometrics as CSV from the biometrics collection."""
     from starlette.responses import PlainTextResponse
     db = get_data_db()
-    source_file = filename.replace(".csv", "") + ".csv"
-    docs = list(db["telemetry"].find(
+    # Normalize filename to match _source_file in biometrics collection
+    base = filename.replace(".csv", "")
+    if not base.endswith("_biometrics"):
+        base += "_biometrics"
+    source_file = base + ".csv"
+    docs = list(db["biometrics"].find(
         {"_source_file": source_file},
         {"_id": 0}
     ))
-    return PlainTextResponse(_telemetry_to_csv(docs))
+    if not docs:
+        # Fallback: try telemetry collection without _biometrics suffix
+        fallback_file = filename.replace(".csv", "").replace("_biometrics", "") + ".csv"
+        docs = list(db["telemetry"].find(
+            {"_source_file": fallback_file},
+            {"_id": 0}
+        ))
+        return PlainTextResponse(_telemetry_to_csv(docs))
+    return PlainTextResponse(_biometrics_to_csv(docs))
 
 @app.get("/api/local/mcracecontext/{year}/tire_stints.csv")
 async def mcracecontext_tire_stints(year: str):
@@ -1148,6 +1252,31 @@ async def mcracecontext_tire_stints(year: str):
             str(int(r.get("tyre_life", 0))) if r.get("tyre_life") else "0",
         ]))
     return PlainTextResponse("\n".join(lines))
+
+
+@app.get("/api/models/{filename}")
+async def serve_glb_model(filename: str):
+    """Serve GLB 3D model files from MongoDB GridFS."""
+    import gridfs
+    from starlette.responses import Response
+    db = get_data_db()
+    fs = gridfs.GridFS(db)
+    try:
+        grid_file = fs.find_one({"filename": filename})
+        if grid_file is None:
+            return Response(content="Model not found", status_code=404)
+        data = grid_file.read()
+        return Response(
+            content=data,
+            media_type="model/gltf-binary",
+            headers={
+                "Cache-Control": "public, max-age=604800",
+                "Content-Disposition": f'inline; filename="{filename}"',
+            },
+        )
+    except Exception as e:
+        return Response(content=str(e), status_code=500)
+
 
 @app.get("/api/local/mccsv/driver_career")
 async def mccsv_driver_career():
