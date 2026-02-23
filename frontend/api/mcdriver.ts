@@ -21,14 +21,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Fallback: query telemetry and synthesize biometrics
     if (!data.length) {
+      // Extract race name: 2024_Bahrain_Grand_Prix_Race_biometrics -> Bahrain
       const raceName = filename
         .replace(/^\d{4}_/, '')
         .replace(/_biometrics$/, '')
+        .replace(/_Grand_Prix_Race$/, '')
         .replace(/_Race$/, '')
         .replace(/_/g, ' ');
 
       const telemetry = await db.collection('telemetry').find(
-        { Race: { $regex: raceName, $options: 'i' }, Year: year },
+        { Race: { $regex: `^${raceName}`, $options: 'i' }, Year: year },
         { projection: { _id: 0 } }
       ).toArray();
 

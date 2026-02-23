@@ -20,13 +20,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // If no match by _source_file, try matching by Race name
     let data = docs;
     if (!data.length) {
-      // Extract race name from filename: 2024_Bahrain_Grand_Prix_Race -> Bahrain Grand Prix
+      // Extract race name: 2024_Bahrain_Grand_Prix_Race -> Bahrain
+      // or 2024_Saudi_Arabian_Grand_Prix_Race -> Saudi Arabian
       const raceName = filename
         .replace(/^\d{4}_/, '')
+        .replace(/_Grand_Prix_Race$/, '')
         .replace(/_Race$/, '')
         .replace(/_/g, ' ');
       data = await db.collection('telemetry').find(
-        { Race: { $regex: raceName, $options: 'i' }, Year: year },
+        { Race: { $regex: `^${raceName}`, $options: 'i' }, Year: year },
         { projection: { _id: 0 } }
       ).toArray();
     }
