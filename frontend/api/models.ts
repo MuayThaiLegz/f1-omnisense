@@ -14,8 +14,16 @@ async function getClient() {
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
-    const filename = (req.query.file as string) ?? '';
-    if (!filename.endsWith('.glb')) return res.status(404).send('Not found');
+    const requestedFile = (req.query.file as string) ?? '';
+    if (!requestedFile.endsWith('.glb')) return res.status(404).send('Not found');
+
+    // Map short names to GridFS filenames
+    const GRIDFS_MAP: Record<string, string> = {
+      'mcl38.glb': 'unpacked-mclaren_mcl38_lod_a.glb',
+      'mcl39.glb': 'f1_2025_mclaren_mcl39.glb',
+      'mcl60.glb': 'unpacked-mclaren_mcl60_lod_a.glb',
+    };
+    const filename = GRIDFS_MAP[requestedFile] ?? requestedFile;
 
     const client = await getClient();
     const db = client.db(process.env.MONGODB_DB || 'McLaren_f1');
