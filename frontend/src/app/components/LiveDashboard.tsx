@@ -768,7 +768,11 @@ export function LiveDashboard() {
       {/* Circuit Track Map + Live Analytics Sidebar */}
       {(() => {
         const circuit = selectedSession ? getCircuitByShortName(selectedSession.circuit_short_name) : undefined;
-        if (!circuit) return null;
+        if (!circuit) return (
+          <div className="bg-[#12121e] rounded-xl border border-[rgba(255,128,0,0.08)] p-6 text-center">
+            <div className="text-amber-400 text-xs">No track map for circuit: "{selectedSession?.circuit_short_name}"</div>
+          </div>
+        );
         return (
           <div className="grid grid-cols-12 gap-4">
             {/* Left: MapLibre Track Map */}
