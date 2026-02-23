@@ -3,7 +3,11 @@
   "outputDirectory": "dist",
   "framework": "vite",
   "rewrites": [
-    { "source": "/api/:path(.*)", "destination": "https://f1-omnisense-backend-production.up.railway.app/api/:path" },
+    { "source": "/api/chat", "destination": "https://f1-omnisense-backend-production.up.railway.app/api/chat" },
+    { "source": "/api/upload", "destination": "https://f1-omnisense-backend-production.up.railway.app/api/upload" },
+    { "source": "/api/3d-gen/:path(.*)", "destination": "https://f1-omnisense-backend-production.up.railway.app/api/3d-gen/:path" },
+    { "source": "/api/visual-search", "destination": "https://f1-omnisense-backend-production.up.railway.app/api/visual-search" },
+    { "source": "/api/visual-tags", "destination": "https://f1-omnisense-backend-production.up.railway.app/api/visual-tags" },
     { "source": "/3d-models/:path(.*)", "destination": "https://f1-omnisense-backend-production.up.railway.app/3d-models/:path" },
     { "source": "/(.*)", "destination": "/index.html" }
   ],
