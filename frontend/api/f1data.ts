@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getDb } from '../_db.js';
+import { getDb } from './_db.js';
 
 function hashCode(s: string): number {
   let h = 0;
@@ -9,8 +9,8 @@ function hashCode(s: string): number {
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
-    const pathArr = Array.isArray(req.query.path) ? req.query.path : [req.query.path ?? ''];
-    const fullPath = pathArr.join('/');
+    const url = req.url ?? '';
+    const fullPath = url.replace(/^\/api\/f1data\//, '').replace(/\?.*$/, '');
     const db = await getDb();
 
     res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=600');

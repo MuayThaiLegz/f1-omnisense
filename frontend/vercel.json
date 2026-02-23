@@ -8,7 +8,11 @@
     { "source": "/api/3d-gen/:path(.*)", "destination": "https://f1-omnisense-backend-production.up.railway.app/api/3d-gen/:path" },
     { "source": "/api/visual-search", "destination": "https://f1-omnisense-backend-production.up.railway.app/api/visual-search" },
     { "source": "/api/visual-tags", "destination": "https://f1-omnisense-backend-production.up.railway.app/api/visual-tags" },
-    { "source": "/3d-models/:path(.*)", "destination": "https://f1-omnisense-backend-production.up.railway.app/3d-models/:path" }
+    { "source": "/3d-models/:path(.*)", "destination": "https://f1-omnisense-backend-production.up.railway.app/3d-models/:path" },
+    { "source": "/api/f1data/:path(.*)", "destination": "/api/f1data" },
+    { "source": "/api/mccar/:path(.*)", "destination": "/api/mccar" },
+    { "source": "/api/mcdriver/:path(.*)", "destination": "/api/mcdriver" },
+    { "source": "/api/mcracecontext/:path(.*)", "destination": "/api/mcracecontext" }
   ],
   "headers": [
     {
