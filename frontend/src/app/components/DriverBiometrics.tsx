@@ -199,11 +199,16 @@ function BiometricIntelligence({ driverCode }: { driverCode: string }) {
 
   useEffect(() => {
     fetch('/api/pipeline/anomaly')
-      .then(r => r.json())
+      .then(r => {
+        if (!r.ok) throw new Error(`API ${r.status}`);
+        return r.json();
+      })
       .then(data => {
-        const drv = (data.drivers ?? []).find((d: any) => d.code === driverCode);
-        if (!drv) return;
-        const mapped = (drv.races ?? []).map((r: any) => {
+        // Handle both direct snapshot and nested structure
+        const drivers = data.drivers ?? [];
+        const drv = drivers.find((d: any) => d.code === driverCode);
+        if (!drv?.races?.length) return;
+        const mapped = drv.races.map((r: any) => {
           const t = r.systems?.Thermal ?? {};
           return {
             race: r.race,
@@ -215,7 +220,7 @@ function BiometricIntelligence({ driverCode }: { driverCode: string }) {
         });
         setRaces(mapped);
       })
-      .catch(() => {})
+      .catch(err => console.warn('[BiometricIntelligence]', err))
       .finally(() => setLoading(false));
   }, [driverCode]);
 

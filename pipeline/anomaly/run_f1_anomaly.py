@@ -342,6 +342,33 @@ def run_driver(driver_code: str) -> dict:
     }
 
 
+def _push_to_mongo(output_data: dict):
+    """Push anomaly scores to MongoDB for the Vercel API."""
+    try:
+        from dotenv import load_dotenv
+        from pymongo import MongoClient
+
+        load_dotenv(ROOT / ".env")
+        uri = os.environ.get("MONGODB_URI")
+        if not uri:
+            logger.warning("MONGODB_URI not set — skipping MongoDB push")
+            return
+
+        db_name = os.environ.get("MONGODB_DB", "McLaren_f1")
+        client = MongoClient(uri)
+        db = client[db_name]
+
+        db["anomaly_scores_snapshot"].drop()
+        db["anomaly_scores_snapshot"].insert_one(output_data)
+
+        logger.info(f"Pushed to MongoDB {db_name}.anomaly_scores_snapshot")
+        client.close()
+    except ImportError:
+        logger.warning("pymongo/dotenv not installed — skipping MongoDB push")
+    except Exception as e:
+        logger.warning(f"MongoDB push failed: {e}")
+
+
 def main():
     """Run anomaly pipeline for all McLaren drivers."""
     logger.info("F1 Anomaly Scoring Pipeline")
@@ -359,7 +386,7 @@ def main():
         if result:
             output_data["drivers"].append(result)
 
-    # Write output
+    # Write local JSON
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
     with open(OUTPUT, "w") as f:
         json.dump(output_data, f, indent=2)
@@ -368,6 +395,9 @@ def main():
     logger.info(f"Drivers: {len(output_data['drivers'])}")
     for d in output_data["drivers"]:
         logger.info(f"  {d['driver']}: {d['overall_health']}% ({d['overall_level']}) — {d['race_count']} races")
+
+    # Push to MongoDB so Vercel API serves fresh data
+    _push_to_mongo(output_data)
 
 
 if __name__ == "__main__":
