@@ -173,26 +173,29 @@ def _text_search_fallback(query: str, k: int = 8) -> list[dict]:
 
 
 def retrieve_context(query: str, k: int = 8) -> list[dict]:
-    """Embed query and retrieve relevant documents from Atlas.
-    Falls back to text search if embedding/vector search fails."""
-    try:
-        embedder = get_embedder()
-        vs = get_vs()
-        query_vec = embedder.embed([query])[0]
-        docs = vs.similarity_search(query, k=k, query_embedding=query_vec)
-        sources = []
-        for doc in docs:
-            sources.append({
-                "content": doc.page_content,
-                "data_type": doc.metadata.get("data_type", ""),
-                "category": doc.metadata.get("category", ""),
-                "source": doc.metadata.get("source", ""),
-                "page": doc.metadata.get("page", 0),
-            })
-        return sources
-    except Exception as e:
-        print(f"  Vector search failed ({e}), falling back to text search")
-        return _text_search_fallback(query, k)
+    """Retrieve relevant documents using text search (fast) with optional
+    vector search upgrade if embedder is already loaded."""
+    global _embedder
+    # If embedder is already loaded, use vector search
+    if _embedder is not None:
+        try:
+            vs = get_vs()
+            query_vec = _embedder.embed([query])[0]
+            docs = vs.similarity_search(query, k=k, query_embedding=query_vec)
+            sources = []
+            for doc in docs:
+                sources.append({
+                    "content": doc.page_content,
+                    "data_type": doc.metadata.get("data_type", ""),
+                    "category": doc.metadata.get("category", ""),
+                    "source": doc.metadata.get("source", ""),
+                    "page": doc.metadata.get("page", 0),
+                })
+            return sources
+        except Exception as e:
+            print(f"  Vector search failed ({e}), falling back to text search")
+    # Fast text search — no model loading required
+    return _text_search_fallback(query, k)
 
 
 def build_rag_prompt(query: str, sources: list[dict], history: list[ChatMessage]) -> list[dict]:
@@ -1256,22 +1259,30 @@ async def mcracecontext_tire_stints(year: str):
 
 @app.get("/api/models/{filename}")
 async def serve_glb_model(filename: str):
-    """Serve GLB 3D model files from MongoDB GridFS."""
+    """Serve GLB 3D model files from MongoDB GridFS with streaming."""
     import gridfs
-    from starlette.responses import Response
+    from starlette.responses import StreamingResponse, Response
     db = get_data_db()
     fs = gridfs.GridFS(db)
     try:
         grid_file = fs.find_one({"filename": filename})
         if grid_file is None:
             return Response(content="Model not found", status_code=404)
-        data = grid_file.read()
-        return Response(
-            content=data,
+
+        def stream_chunks():
+            while True:
+                chunk = grid_file.read(256 * 1024)  # 256KB chunks
+                if not chunk:
+                    break
+                yield chunk
+
+        return StreamingResponse(
+            stream_chunks(),
             media_type="model/gltf-binary",
             headers={
                 "Cache-Control": "public, max-age=604800",
                 "Content-Disposition": f'inline; filename="{filename}"',
+                "Content-Length": str(grid_file.length),
             },
         )
     except Exception as e:
