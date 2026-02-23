@@ -754,6 +754,63 @@ _DRIVER_META = {
             "team_colour": "FF8000", "country_code": "AUS", "headshot_url": ""},
 }
 
+# Map CSV GP names to OpenF1 circuit_short_name values
+_GP_TO_CIRCUIT: dict[str, str] = {
+    "Abu Dhabi Grand Prix": "Yas Marina Circuit",
+    "Australian Grand Prix": "Melbourne",
+    "Azerbaijan Grand Prix": "Baku",
+    "Bahrain Grand Prix": "Sakhir",
+    "Belgian Grand Prix": "Spa-Francorchamps",
+    "British Grand Prix": "Silverstone",
+    "Canadian Grand Prix": "Montreal",
+    "Chinese Grand Prix": "Shanghai",
+    "Dutch Grand Prix": "Zandvoort",
+    "Emilia Romagna Grand Prix": "Imola",
+    "Hungarian Grand Prix": "Hungaroring",
+    "Italian Grand Prix": "Monza",
+    "Japanese Grand Prix": "Suzuka",
+    "Las Vegas Grand Prix": "Las Vegas",
+    "Mexico City Grand Prix": "Mexico City",
+    "Miami Grand Prix": "Miami",
+    "Monaco Grand Prix": "Monte Carlo",
+    "Qatar Grand Prix": "Lusail",
+    "Saudi Arabian Grand Prix": "Jeddah",
+    "Singapore Grand Prix": "Singapore",
+    "Spanish Grand Prix": "Catalunya",
+    "Austrian Grand Prix": "Spielberg",
+    "United States Grand Prix": "Austin",
+    "São Paulo Grand Prix": "Interlagos",
+    "Brazilian Grand Prix": "Interlagos",
+}
+
+_GP_TO_COUNTRY: dict[str, str] = {
+    "Abu Dhabi Grand Prix": "UAE",
+    "Australian Grand Prix": "Australia",
+    "Azerbaijan Grand Prix": "Azerbaijan",
+    "Bahrain Grand Prix": "Bahrain",
+    "Belgian Grand Prix": "Belgium",
+    "British Grand Prix": "Great Britain",
+    "Canadian Grand Prix": "Canada",
+    "Chinese Grand Prix": "China",
+    "Dutch Grand Prix": "Netherlands",
+    "Emilia Romagna Grand Prix": "Italy",
+    "Hungarian Grand Prix": "Hungary",
+    "Italian Grand Prix": "Italy",
+    "Japanese Grand Prix": "Japan",
+    "Las Vegas Grand Prix": "United States",
+    "Mexico City Grand Prix": "Mexico",
+    "Miami Grand Prix": "United States",
+    "Monaco Grand Prix": "Monaco",
+    "Qatar Grand Prix": "Qatar",
+    "Saudi Arabian Grand Prix": "Saudi Arabia",
+    "Singapore Grand Prix": "Singapore",
+    "Spanish Grand Prix": "Spain",
+    "Austrian Grand Prix": "Austria",
+    "United States Grand Prix": "United States",
+    "São Paulo Grand Prix": "Brazil",
+    "Brazilian Grand Prix": "Brazil",
+}
+
 @app.get("/api/local/openf1/sessions")
 async def openf1_sessions():
     """Generate OpenF1-format sessions from telemetry data."""
@@ -761,7 +818,6 @@ async def openf1_sessions():
     sources = db["telemetry"].distinct("_source_file")
     sessions = []
     session_key = 9000
-    # Assign race index within each year for date spacing
     race_idx = 0
     prev_year = None
     for src in sorted(sources):
@@ -773,9 +829,9 @@ async def openf1_sessions():
             race_idx = 0
             prev_year = year
         race_name = " ".join(parts[1:]).replace(" Race", "")
-        circuit_short = parts[1] if len(parts) > 1 else "Unknown"
-        # Space sessions ~2 weeks apart so they sort chronologically
-        month = 3 + race_idx  # Start from March
+        circuit_short = _GP_TO_CIRCUIT.get(race_name, race_name.split()[0])
+        country = _GP_TO_COUNTRY.get(race_name, circuit_short)
+        month = 3 + race_idx
         if month > 12:
             month = 12
         sessions.append({
@@ -787,7 +843,7 @@ async def openf1_sessions():
             "year": int(year),
             "circuit_key": session_key,
             "circuit_short_name": circuit_short,
-            "country_name": circuit_short,
+            "country_name": country,
             "country_key": session_key,
             "location": circuit_short,
             "meeting_key": session_key,
