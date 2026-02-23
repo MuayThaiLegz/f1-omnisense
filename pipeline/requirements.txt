@@ -15,6 +15,7 @@ transformers==4.47.1
 tokenizers==0.21.4
 safetensors==0.7.0
 open-clip-torch==3.2.0
+einops
 
 # Database
 pymongo==4.16.0
