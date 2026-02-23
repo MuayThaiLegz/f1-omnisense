@@ -9,10 +9,10 @@
     { "source": "/api/visual-search", "destination": "https://f1-omnisense-backend-production.up.railway.app/api/visual-search" },
     { "source": "/api/visual-tags", "destination": "https://f1-omnisense-backend-production.up.railway.app/api/visual-tags" },
     { "source": "/3d-models/:path(.*)", "destination": "https://f1-omnisense-backend-production.up.railway.app/3d-models/:path" },
-    { "source": "/api/f1data/:path(.*)", "destination": "/api/f1data" },
-    { "source": "/api/mccar/:path(.*)", "destination": "/api/mccar" },
-    { "source": "/api/mcdriver/:path(.*)", "destination": "/api/mcdriver" },
-    { "source": "/api/mcracecontext/:path(.*)", "destination": "/api/mcracecontext" }
+    { "source": "/api/f1data/:path(.*)", "destination": "/api/f1data?path=:path" },
+    { "source": "/api/mccar/:path(.*)", "destination": "/api/mccar?path=:path" },
+    { "source": "/api/mcdriver/:path(.*)", "destination": "/api/mcdriver?path=:path" },
+    { "source": "/api/mcracecontext/:path(.*)", "destination": "/api/mcracecontext?path=:path" }
   ],
   "headers": [
     {

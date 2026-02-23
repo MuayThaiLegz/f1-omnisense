@@ -3,9 +3,9 @@ import { getDb } from './_db.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
-    const url = req.url ?? '';
-    // /api/mcracecontext/2024/tire_stints.csv
-    const m = url.match(/\/api\/mcracecontext\/(\d{4})\/tire_stints\.csv/);
+    const fullPath = (req.query.path as string) ?? '';
+    // path = 2024/tire_stints.csv
+    const m = fullPath.match(/^(\d{4})\/tire_stints\.csv$/);
     if (!m) return res.status(404).send('');
 
     const year = m[1];

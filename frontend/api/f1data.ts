@@ -9,8 +9,7 @@ function hashCode(s: string): number {
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
-    const url = req.url ?? '';
-    const fullPath = url.replace(/^\/api\/f1data\//, '').replace(/\?.*$/, '');
+    const fullPath = (req.query.path as string) ?? '';
     const db = await getDb();
 
     res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=600');
