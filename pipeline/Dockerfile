@@ -12,7 +12,8 @@ RUN pip install --no-cache-dir \
     torch torchvision \
     --index-url https://download.pytorch.org/whl/cpu
 
-# Install remaining Python deps (bust cache: v2 - added einops)
+# Install remaining Python deps
+ARG CACHE_BUST=v2
 COPY pipeline/requirements.txt /tmp/requirements.txt
 RUN pip install --no-cache-dir -r /tmp/requirements.txt
 
