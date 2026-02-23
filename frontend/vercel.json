@@ -13,7 +13,7 @@
     { "source": "/api/mccar/:path(.*)", "destination": "/api/mccar?path=:path" },
     { "source": "/api/mcdriver/:path(.*)", "destination": "/api/mcdriver?path=:path" },
     { "source": "/api/mcracecontext/:path(.*)", "destination": "/api/mcracecontext?path=:path" },
-    { "source": "/models/:file", "destination": "/api/models?file=:file" }
+    { "source": "/models/:file(.*\\.glb)", "destination": "/api/models?file=:file" }
   ],
   "headers": [
     {
