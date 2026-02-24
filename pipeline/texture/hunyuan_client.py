@@ -16,7 +16,7 @@ from dataclasses import dataclass, field
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_API_URL = "http://34.86.192.78:8080/"
+DEFAULT_API_URL = "http://34.48.15.70:8080/"
 
 
 @dataclass
