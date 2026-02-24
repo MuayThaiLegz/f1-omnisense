@@ -7,7 +7,7 @@ const BASE = '/api/3d-gen';
 export interface GenerateParams {
   image: File;
   model_name?: string;
-  provider: 'hunyuan' | 'meshy' | 'texture_paint';
+  provider: 'hunyuan' | 'meshy' | 'tripo' | 'trellis' | 'texture_paint';
   textured?: boolean;
   steps?: number;
   guidance_scale?: number;

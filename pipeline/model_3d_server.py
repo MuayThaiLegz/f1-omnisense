@@ -48,7 +48,7 @@ class Regenerate3DRequest(BaseModel):
 async def generate_3d_model(
     image: UploadFile = File(...),
     model_name: str = Form(""),
-    provider: str = Form("meshy"),  # hunyuan disabled — kept in generate_3d.py for future use
+    provider: str = Form("hunyuan"),
     textured: bool = Form(False),
     steps: int = Form(30),
     guidance_scale: float = Form(5.0),
@@ -64,8 +64,8 @@ async def generate_3d_model(
     texture_resolution: int = Form(1024),
 ):
     """Submit a 3D model generation job with image upload."""
-    if provider not in ("meshy", "tripo", "trellis", "texture_paint"):
-        raise HTTPException(status_code=400, detail="Provider must be 'meshy', 'tripo', 'trellis', or 'texture_paint'")
+    if provider not in ("hunyuan", "meshy", "tripo", "trellis", "texture_paint"):
+        raise HTTPException(status_code=400, detail="Provider must be 'hunyuan', 'meshy', 'tripo', 'trellis', or 'texture_paint'")
 
     if not model_name:
         stem = Path(image.filename).stem if image.filename else "model"
@@ -80,16 +80,15 @@ async def generate_3d_model(
         f.write(content)
 
     params = {}
-    # Hunyuan params kept for future re-enablement
-    # if provider == "hunyuan":
-    #     params = {
-    #         "textured": textured, "steps": steps,
-    #         "guidance_scale": guidance_scale, "seed": seed,
-    #         "octree_resolution": octree_resolution,
-    #         "randomize_seed": randomize_seed,
-    #         "material_preset": material_preset or None,
-    #     }
-    if provider == "meshy":
+    if provider == "hunyuan":
+        params = {
+            "textured": textured, "steps": steps,
+            "guidance_scale": guidance_scale, "seed": seed,
+            "octree_resolution": octree_resolution,
+            "randomize_seed": randomize_seed,
+            "material_preset": material_preset or None,
+        }
+    elif provider == "meshy":
         params = {
             "texture_prompt": texture_prompt,
             "enable_pbr": enable_pbr,
