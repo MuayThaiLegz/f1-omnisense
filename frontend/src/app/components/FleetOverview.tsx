@@ -4,8 +4,7 @@ import {
   Thermometer, Gauge, Zap, CircleDot, Shield, TrendingUp,
   Cpu, Disc, Cog, Wrench, ShieldAlert, Eye, FileText, Bell,
 } from 'lucide-react';
-// NOTE: ModelGen3D (AI 3D model generation) is available — re-enable in settings/admin panel
-// import { ModelGen3D } from './ModelGen3D';
+import { ModelGen3D } from './ModelGen3D';
 
 // ─── Types (aligned with anomaly_scores.json) ──────────────────────
 type HealthLevel = 'nominal' | 'warning' | 'critical';
@@ -487,9 +486,8 @@ export function FleetOverview() {
         </div>
       )}
 
-      {/* NOTE: 3D Car Models viewer and AI Model Generation are available
-         but hidden from the default fleet view. They can be re-enabled in
-         a settings/admin panel. Components: <Car3DViewer /> and <ModelGen3D /> */}
+      {/* AI 3D Model Generation */}
+      <ModelGen3D />
     </div>
   );
 }

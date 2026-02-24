@@ -10,7 +10,7 @@ import type { MaterialPreset, GeneratedModel, Job, MeshQuality } from '../api/mo
 // ─── Provider config ────────────────────────────────────────────────
 const PROVIDERS = [
   { id: 'hunyuan' as const, label: 'Core', sublabel: 'Hunyuan3D', icon: Cpu, color: '#3b82f6', desc: 'Shape generation via Hunyuan3D + PBR materials' },
-  { id: 'meshy' as const, label: 'Pro', sublabel: 'Meshy.ai', icon: Sparkles, color: '#FF8000', desc: 'Production-quality textured 3D via Meshy API' },
+  // { id: 'meshy' as const, label: 'Pro', sublabel: 'Meshy.ai', icon: Sparkles, color: '#FF8000', desc: 'Production-quality textured 3D via Meshy API' },
   { id: 'texture_paint' as const, label: 'Paint', sublabel: 'TEXTure', icon: Palette, color: '#a855f7', desc: 'Local GPU texture painting on existing mesh' },
 ] as const;
 
@@ -22,7 +22,7 @@ export function ModelGen3D() {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [modelName, setModelName] = useState('');
-  const [provider, setProvider] = useState<Provider>('meshy');
+  const [provider, setProvider] = useState<Provider>('hunyuan');
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -84,7 +84,7 @@ export function ModelGen3D() {
         provider,
         textured: provider === 'hunyuan' ? textured : undefined,
         texture_prompt: texturePrompt || undefined,
-        enable_pbr: provider === 'meshy' ? enablePbr : undefined,
+        enable_pbr: enablePbr || undefined,
         material_preset: materialPreset || undefined,
       });
 
@@ -319,26 +319,7 @@ export function ModelGen3D() {
             </div>
           )}
 
-          {/* Meshy options */}
-          {provider === 'meshy' && (
-            <div className="space-y-2">
-              <div>
-                <label className="text-[12px] text-muted-foreground mb-1 block">Texture Prompt (optional)</label>
-                <input
-                  type="text"
-                  value={texturePrompt}
-                  onChange={(e) => setTexturePrompt(e.target.value)}
-                  placeholder="e.g. McLaren papaya orange livery, carbon fiber details"
-                  className="w-full bg-[#0D1117] border border-[rgba(255,128,0,0.12)] rounded-lg px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-[#FF8000]/40"
-                />
-              </div>
-              <label className="flex items-center gap-2 text-[12px] text-muted-foreground cursor-pointer">
-                <input type="checkbox" checked={enablePbr} onChange={(e) => setEnablePbr(e.target.checked)}
-                  className="rounded border-[rgba(255,128,0,0.2)] bg-[#0D1117] text-[#FF8000] focus:ring-[#FF8000]/30 w-3 h-3" />
-                Enable PBR materials
-              </label>
-            </div>
-          )}
+          {/* Meshy options — disabled, provider commented out */}
 
           {/* TEXTure options */}
           {provider === 'texture_paint' && (
