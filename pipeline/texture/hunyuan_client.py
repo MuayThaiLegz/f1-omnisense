@@ -9,6 +9,7 @@ Available endpoints (discovered via view_api()):
   /on_export_click   — re-export as glb/obj/ply/stl with face reduction
 """
 
+import time
 import shutil
 import logging
 from pathlib import Path
@@ -17,6 +18,9 @@ from dataclasses import dataclass, field
 logger = logging.getLogger(__name__)
 
 DEFAULT_API_URL = "http://34.48.15.70:8080/"
+
+# Timeout for waiting on GPU generation results (seconds)
+PREDICT_TIMEOUT = 300  # 5 minutes
 
 
 @dataclass
@@ -48,9 +52,43 @@ class HunyuanClient:
             logger.info("Connecting to Hunyuan3D at %s", self.api_url)
             self._client = Client(
                 self.api_url,
-                httpx_kwargs={"timeout": 300},  # 5 min — generation takes 30-90s
+                httpx_kwargs={"timeout": PREDICT_TIMEOUT},
             )
         return self._client
+
+    def _predict_with_retry(self, max_retries: int = 2, **kwargs):
+        """Submit a Gradio job and poll for result with retry on connection errors.
+
+        Uses submit() + result() instead of predict() to be more resilient
+        to websocket drops on Railway/cloud environments.
+        """
+        client = self._get_client()
+        last_err = None
+
+        for attempt in range(1, max_retries + 1):
+            try:
+                logger.info("Gradio submit attempt %d/%d for %s",
+                            attempt, max_retries, kwargs.get("api_name", "?"))
+                job = client.submit(**kwargs)
+                result = job.result(timeout=PREDICT_TIMEOUT)
+                return result
+            except Exception as e:
+                last_err = e
+                err_str = str(e)
+                logger.warning("Gradio attempt %d failed: %s", attempt, err_str)
+
+                # On connection errors, reset the client for a fresh connection
+                if "Errno 110" in err_str or "timed out" in err_str.lower():
+                    logger.info("Resetting Gradio client after connection error")
+                    self._client = None
+                    if attempt < max_retries:
+                        time.sleep(3)
+                    continue
+
+                # Non-connection errors — don't retry
+                raise
+
+        raise last_err
 
     def view_api(self) -> str:
         """Discover available API endpoints on the server."""
@@ -95,10 +133,9 @@ class HunyuanClient:
         if not image_path.exists():
             raise FileNotFoundError(f"Input image not found: {image_path}")
 
-        client = self._get_client()
         logger.info("Submitting %s to Hunyuan3D /shape_generation", image_path.name)
 
-        result = client.predict(
+        result = self._predict_with_retry(
             image=handle_file(str(image_path)),
             steps=float(steps),
             guidance_scale=float(guidance_scale),
@@ -157,10 +194,9 @@ class HunyuanClient:
         if not image_path.exists():
             raise FileNotFoundError(f"Input image not found: {image_path}")
 
-        client = self._get_client()
         logger.info("Submitting %s to Hunyuan3D /generation_all", image_path.name)
 
-        result = client.predict(
+        result = self._predict_with_retry(
             image=handle_file(str(image_path)),
             steps=float(steps),
             guidance_scale=float(guidance_scale),
