@@ -46,7 +46,10 @@ class HunyuanClient:
         if self._client is None:
             from gradio_client import Client
             logger.info("Connecting to Hunyuan3D at %s", self.api_url)
-            self._client = Client(self.api_url)
+            self._client = Client(
+                self.api_url,
+                httpx_kwargs={"timeout": 300},  # 5 min — generation takes 30-90s
+            )
         return self._client
 
     def view_api(self) -> str:
