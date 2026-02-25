@@ -477,40 +477,48 @@ def list_jobs() -> list:
 
 
 def list_generated_models() -> list:
-    """Scan output directory for completed models."""
-    if not MODELS_3D_DIR.exists():
-        return []
-
+    """List generated models from local filesystem + MongoDB."""
+    seen = set()
     models = []
-    for model_dir in sorted(MODELS_3D_DIR.iterdir()):
-        if not model_dir.is_dir():
-            continue
-        meta_path = model_dir / "metadata.json"
-        if meta_path.exists():
-            with open(meta_path) as f:
-                meta = json.load(f)
-            meta["model_name"] = model_dir.name
-            meta["directory"] = str(model_dir)
+
+    # 1. Local filesystem
+    if MODELS_3D_DIR.exists():
+        for model_dir in sorted(MODELS_3D_DIR.iterdir()):
+            if not model_dir.is_dir():
+                continue
+            meta_path = model_dir / "metadata.json"
+            if meta_path.exists():
+                with open(meta_path) as f:
+                    meta = json.load(f)
+                meta["model_name"] = model_dir.name
+                meta["directory"] = str(model_dir)
+            elif list(model_dir.glob("*.glb")):
+                meta = {"model_name": model_dir.name, "directory": str(model_dir)}
+            else:
+                continue
             meta["has_hunyuan"] = (model_dir / "hunyuan.glb").exists()
             meta["has_meshy"] = (model_dir / "meshy.glb").exists()
             meta["has_pbr"] = (model_dir / "hunyuan_pbr.glb").exists()
             meta["has_texture_paint"] = (model_dir / "texture_paint.glb").exists()
             meta["has_tripo"] = (model_dir / "tripo.glb").exists()
             meta["has_trellis"] = (model_dir / "trellis.glb").exists()
+            seen.add(model_dir.name)
             models.append(meta)
-        else:
-            glbs = list(model_dir.glob("*.glb"))
-            if glbs:
-                models.append({
-                    "model_name": model_dir.name,
-                    "directory": str(model_dir),
-                    "has_hunyuan": (model_dir / "hunyuan.glb").exists(),
-                    "has_meshy": (model_dir / "meshy.glb").exists(),
-                    "has_pbr": (model_dir / "hunyuan_pbr.glb").exists(),
-                    "has_texture_paint": (model_dir / "texture_paint.glb").exists(),
-                    "has_tripo": (model_dir / "tripo.glb").exists(),
-                    "has_trellis": (model_dir / "trellis.glb").exists(),
-                })
+
+    # 2. MongoDB — models that only exist in GridFS (e.g. after redeploy)
+    try:
+        from pymongo import MongoClient
+        uri = os.environ.get("MONGODB_URI", "")
+        if uri:
+            client = MongoClient(uri, serverSelectionTimeoutMS=3000)
+            db = client[os.environ.get("MONGODB_DB", "McLaren_f1")]
+            for doc in db["generated_models"].find({}, {"_id": 0}):
+                name = doc.get("model_name")
+                if name and name not in seen:
+                    models.append(doc)
+            client.close()
+    except Exception as e:
+        logger.debug("MongoDB model list unavailable: %s", e)
 
     return models
 
@@ -629,6 +637,40 @@ def _push_job_glbs_to_gridfs(model_name: str, provider: str, output_dir: Path):
 
     if pushed:
         logger.info("GridFS push complete for %s: %s", model_name, pushed)
+        # Save metadata to MongoDB so model list persists across deploys
+        try:
+            from pymongo import MongoClient
+            uri = os.environ.get("MONGODB_URI", "")
+            if uri:
+                client = MongoClient(uri)
+                db = client[os.environ.get("MONGODB_DB", "McLaren_f1")]
+                meta = {}
+                meta_path = output_dir / "metadata.json"
+                if meta_path.exists():
+                    with open(meta_path) as f:
+                        meta = json.load(f)
+                doc = {
+                    "model_name": model_name,
+                    "has_hunyuan": any("hunyuan" in f and "pbr" not in f and "textured" not in f for f in pushed),
+                    "has_pbr": any("pbr" in f for f in pushed),
+                    "has_hunyuan_textured": any("textured" in f for f in pushed),
+                    "has_meshy": any("meshy" in f for f in pushed),
+                    "has_tripo": any("tripo" in f for f in pushed),
+                    "has_trellis": any("trellis" in f for f in pushed),
+                    "has_texture_paint": any("texture_paint" in f for f in pushed),
+                    "gridfs_files": pushed,
+                    "provider": meta.get("provider", provider),
+                    "created_at": meta.get("created_at", datetime.now(timezone.utc).isoformat()),
+                    "updated_at": datetime.now(timezone.utc).isoformat(),
+                }
+                db["generated_models"].update_one(
+                    {"model_name": model_name}, {"$set": doc}, upsert=True,
+                )
+                logger.info("Saved model metadata to MongoDB: %s", model_name)
+                client.close()
+        except Exception as e:
+            logger.warning("MongoDB metadata save failed: %s", e)
+
     return pushed
 
 
