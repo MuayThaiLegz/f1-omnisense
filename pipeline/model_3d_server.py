@@ -159,7 +159,7 @@ def list_3d_models():
 
 @router.get("/models/{model_name}/glb")
 def download_3d_glb(model_name: str, provider: str = "hunyuan", textured: bool = False):
-    """Download GLB file for a model."""
+    """Download GLB file for a model (local filesystem first, GridFS fallback)."""
     model_dir = MODELS_3D_DIR / model_name
 
     if provider == "texture_paint":
@@ -174,16 +174,50 @@ def download_3d_glb(model_name: str, provider: str = "hunyuan", textured: bool =
 
     glb_path = model_dir / glb_name
 
-    if not glb_path.exists():
-        raise HTTPException(
-            status_code=404,
-            detail=f"GLB not found: {model_name}/{glb_name}"
+    # Serve from local filesystem if available
+    if glb_path.exists():
+        return FileResponse(
+            glb_path,
+            media_type="model/gltf-binary",
+            filename=f"{model_name}_{glb_name}",
         )
 
-    return FileResponse(
-        glb_path,
-        media_type="model/gltf-binary",
-        filename=f"{model_name}_{glb_name}",
+    # Fallback: serve from MongoDB GridFS
+    gridfs_filename = f"{model_name}_{glb_name}"
+    try:
+        import gridfs
+        from starlette.responses import StreamingResponse
+        from pymongo import MongoClient
+
+        uri = os.environ.get("MONGODB_URI", "")
+        if uri:
+            client = MongoClient(uri)
+            db = client[os.environ.get("MONGODB_DB", "McLaren_f1")]
+            fs = gridfs.GridFS(db)
+            grid_file = fs.find_one({"filename": gridfs_filename})
+            if grid_file:
+                def stream():
+                    while True:
+                        chunk = grid_file.read(256 * 1024)
+                        if not chunk:
+                            break
+                        yield chunk
+
+                return StreamingResponse(
+                    stream(),
+                    media_type="model/gltf-binary",
+                    headers={
+                        "Content-Length": str(grid_file.length),
+                        "Content-Disposition": f'inline; filename="{gridfs_filename}"',
+                        "Cache-Control": "public, max-age=604800",
+                    },
+                )
+    except Exception as e:
+        logger.warning("GridFS fallback failed for %s: %s", gridfs_filename, e)
+
+    raise HTTPException(
+        status_code=404,
+        detail=f"GLB not found: {model_name}/{glb_name}"
     )
 
 

@@ -1,10 +1,11 @@
 """3D model generation orchestrator for F1.
 
-Coordinates: uploaded image -> Meshy / Tripo / TRELLIS -> GLB + metadata.
-Hunyuan3D code is kept but disabled (requires GCP VM + bpy).
+Coordinates: uploaded image -> Meshy / Tripo / TRELLIS / Hunyuan -> GLB + metadata.
+After generation, pushes GLB files to MongoDB GridFS for Vercel serving.
 Manages background jobs with threading.
 """
 
+import os
 import json
 import time
 import uuid
@@ -443,6 +444,15 @@ def _run_generation(job_id: str, model_name: str, provider: str,
             except Exception as e:
                 logger.warning("PBR application skipped: %s", e)
 
+        # Push generated GLBs to MongoDB GridFS for Vercel serving
+        _3d_jobs[job_id]["progress"] = 95
+        try:
+            pushed = _push_job_glbs_to_gridfs(model_name, provider, output_dir)
+            if pushed:
+                _3d_jobs[job_id]["gridfs_files"] = pushed
+        except Exception as e:
+            logger.warning("GridFS push failed (non-fatal): %s", e)
+
         _3d_jobs[job_id]["status"] = "completed"
         _3d_jobs[job_id]["progress"] = 100
         _3d_jobs[job_id]["completed_at"] = datetime.now(timezone.utc).isoformat()
@@ -538,6 +548,88 @@ def get_mesh_quality(model_name: str) -> dict:
             })
 
     return result
+
+
+def _push_glb_to_gridfs(glb_path: Path, gridfs_filename: str) -> bool:
+    """Upload a GLB file to MongoDB GridFS for Vercel serving.
+
+    Args:
+        glb_path: Local path to the GLB file.
+        gridfs_filename: Filename to store in GridFS (e.g. 'image3_hunyuan.glb').
+
+    Returns:
+        True if upload succeeded, False otherwise.
+    """
+    try:
+        from pymongo import MongoClient
+        import gridfs
+
+        uri = os.environ.get("MONGODB_URI", "")
+        if not uri:
+            logger.warning("MONGODB_URI not set — skipping GridFS push")
+            return False
+
+        db_name = os.environ.get("MONGODB_DB", "McLaren_f1")
+        client = MongoClient(uri)
+        db = client[db_name]
+        fs = gridfs.GridFS(db)
+
+        # Delete existing file with same name to avoid duplicates
+        existing = fs.find_one({"filename": gridfs_filename})
+        if existing:
+            fs.delete(existing._id)
+            logger.info("Replaced existing GridFS file: %s", gridfs_filename)
+
+        with open(glb_path, "rb") as f:
+            fs.put(
+                f,
+                filename=gridfs_filename,
+                content_type="model/gltf-binary",
+                metadata={
+                    "source": "3d-generation",
+                    "uploaded_at": datetime.now(timezone.utc).isoformat(),
+                },
+            )
+
+        size_mb = glb_path.stat().st_size / (1024 * 1024)
+        logger.info("Pushed to GridFS: %s (%.1f MB)", gridfs_filename, size_mb)
+        client.close()
+        return True
+
+    except ImportError:
+        logger.warning("pymongo/gridfs not installed — skipping GridFS push")
+        return False
+    except Exception as e:
+        logger.warning("GridFS push failed for %s: %s", gridfs_filename, e)
+        return False
+
+
+def _push_job_glbs_to_gridfs(model_name: str, provider: str, output_dir: Path):
+    """Push all GLB files from a completed job to GridFS.
+
+    Naming convention: {model_name}_{variant}.glb
+    e.g. image3_hunyuan.glb, image3_hunyuan_pbr.glb
+    """
+    glb_variants = {
+        "hunyuan.glb": f"{model_name}_hunyuan.glb",
+        "hunyuan_pbr.glb": f"{model_name}_hunyuan_pbr.glb",
+        "hunyuan_textured.glb": f"{model_name}_hunyuan_textured.glb",
+        "meshy.glb": f"{model_name}_meshy.glb",
+        "tripo.glb": f"{model_name}_tripo.glb",
+        "trellis.glb": f"{model_name}_trellis.glb",
+        "texture_paint.glb": f"{model_name}_texture_paint.glb",
+    }
+
+    pushed = []
+    for local_name, gridfs_name in glb_variants.items():
+        glb_path = output_dir / local_name
+        if glb_path.exists():
+            if _push_glb_to_gridfs(glb_path, gridfs_name):
+                pushed.append(gridfs_name)
+
+    if pushed:
+        logger.info("GridFS push complete for %s: %s", model_name, pushed)
+    return pushed
 
 
 def _save_metadata(output_dir: Path, metadata: dict):
