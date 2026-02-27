@@ -42,6 +42,9 @@ from pipeline.omni_rag_router import router as omni_rag_router
 from pipeline.omni_kex_router import router as omni_kex_router
 from pipeline.omni_doc_router import router as omni_doc_router
 from pipeline.omni_data_router import router as omni_data_router
+from pipeline.omni_bedding_router import router as omni_bedding_router
+from pipeline.omni_vis_router import router as omni_vis_router
+from pipeline.omni_dapt_router import router as omni_dapt_router
 from pipeline.opponents.server import router as opponents_router
 
 # ── Config ───────────────────────────────────────────────────────────────
@@ -69,6 +72,9 @@ app.include_router(omni_rag_router)
 app.include_router(omni_kex_router)
 app.include_router(omni_doc_router)
 app.include_router(omni_data_router)
+app.include_router(omni_bedding_router)
+app.include_router(omni_vis_router)
+app.include_router(omni_dapt_router)
 app.include_router(opponents_router)
 
 # Lazy-init singletons
