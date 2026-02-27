@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import {
   Brain, FileText, Cog, Ruler, FlaskConical, ChevronDown, ChevronRight,
   Loader2, Cpu, DollarSign, Layers, Upload, CheckCircle2, XCircle, CloudUpload,
+  Sparkles, Zap, Table2, Image,
 } from 'lucide-react';
 import type { IntelligenceData, DocumentMeta } from '../types';
 
@@ -10,7 +11,19 @@ interface UploadItem {
   status: 'uploading' | 'done' | 'error';
   chunks?: number;
   textLength?: number;
+  tables?: number;
+  images?: number;
   error?: string;
+}
+
+interface KexInsight {
+  pillar: string;
+  text: string;
+  status: string;
+  model_used: string;
+  provider_used: string;
+  generation_time_s: number;
+  grounding?: { grounding_score: number; total_claims: number; verified_claims: number };
 }
 
 export function AIInsights() {
@@ -19,11 +32,12 @@ export function AIInsights() {
   const [expandedDocs, setExpandedDocs] = useState<Set<string>>(new Set());
   const [uploads, setUploads] = useState<UploadItem[]>([]);
   const [dragging, setDragging] = useState(false);
+  const [kexInsights, setKexInsights] = useState<Record<string, KexInsight | null>>({});
+  const [kexLoading, setKexLoading] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const uploadFiles = useCallback(async (files: FileList | File[]) => {
     const fileArray = Array.from(files);
-    // Add all files as uploading
     setUploads(prev => [
       ...fileArray.map(f => ({ name: f.name, status: 'uploading' as const })),
       ...prev,
@@ -38,7 +52,11 @@ export function AIInsights() {
         setUploads(prev => prev.map(u =>
           u.name === file.name && u.status === 'uploading'
             ? result.status === 'ok'
-              ? { name: file.name, status: 'done', chunks: result.chunks, textLength: result.text_length }
+              ? {
+                  name: file.name, status: 'done',
+                  chunks: result.chunks, textLength: result.text_length,
+                  tables: result.tables, images: result.images,
+                }
               : { name: file.name, status: 'error', error: result.error }
             : u
         ));
@@ -50,6 +68,22 @@ export function AIInsights() {
         ));
       }
     }
+  }, []);
+
+  const fetchKexInsight = useCallback(async (driverCode: string) => {
+    setKexLoading(driverCode);
+    try {
+      const res = await fetch(`/api/omni/kex/extract/driver/${driverCode}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ response_length: 'medium' }),
+      });
+      if (res.ok) {
+        const insight = await res.json();
+        setKexInsights(prev => ({ ...prev, [driverCode]: insight }));
+      }
+    } catch { /* OmniKeX unavailable */ }
+    setKexLoading(null);
   }, []);
 
   useEffect(() => {
@@ -146,6 +180,75 @@ export function AIInsights() {
         </div>
       </div>
 
+      {/* OmniKeX Insights Panel */}
+      <div>
+        <h3 className="text-sm text-muted-foreground tracking-widest mb-2">KNOWLEDGE EXTRACTION (OmniKeX)</h3>
+        <div className="bg-[#1A1F2E] border border-[rgba(255,128,0,0.12)] rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.3)] p-4">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-7 h-7 rounded-lg bg-purple-500/10 flex items-center justify-center">
+              <Sparkles className="w-4 h-4 text-purple-400" />
+            </div>
+            <div className="flex-1">
+              <div className="text-[11px] text-muted-foreground">
+                WISE Framework — generates NL insights from driver telemetry with anti-fabrication grounding
+              </div>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            {[
+              { code: 'NOR', name: 'Lando Norris' },
+              { code: 'PIA', name: 'Oscar Piastri' },
+            ].map(({ code, name }) => (
+              <div key={code} className="bg-[#0D1117] rounded-lg p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[11px] font-mono text-[#FF8000]">{code}</span>
+                  <span className="text-[11px] text-muted-foreground">{name}</span>
+                </div>
+                {kexInsights[code] ? (
+                  <div>
+                    <p className="text-[11px] text-foreground leading-relaxed whitespace-pre-wrap line-clamp-6">
+                      {kexInsights[code]!.text}
+                    </p>
+                    <div className="flex items-center gap-2 mt-2 text-[10px] text-muted-foreground">
+                      <span>{kexInsights[code]!.pillar}</span>
+                      <span>|</span>
+                      <span>{kexInsights[code]!.model_used || 'auto'}</span>
+                      {kexInsights[code]!.grounding && (
+                        <>
+                          <span>|</span>
+                          <span className={kexInsights[code]!.grounding!.grounding_score >= 0.7 ? 'text-green-400' : 'text-amber-400'}>
+                            {Math.round(kexInsights[code]!.grounding!.grounding_score * 100)}% grounded
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => fetchKexInsight(code)}
+                    disabled={kexLoading !== null}
+                    className="w-full flex items-center justify-center gap-2 text-[11px] text-[#FF8000] hover:text-[#FF8000]/80 bg-[#FF8000]/5 rounded-lg py-2 transition-colors disabled:opacity-40"
+                  >
+                    {kexLoading === code ? (
+                      <>
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                        Generating insight...
+                      </>
+                    ) : (
+                      <>
+                        <Zap className="w-3 h-3" />
+                        Generate Insight
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
       {/* Upload Section */}
       <div>
         <h3 className="text-sm text-muted-foreground tracking-widest mb-2">UPLOAD DOCUMENTS</h3>
@@ -176,7 +279,7 @@ export function AIInsights() {
                 </button>
               </p>
               <p className="text-[12px] text-muted-foreground mt-1">
-                PDF, DOCX, TXT, CSV, JSON, MD — ingested into RAG knowledge base
+                PDF, DOCX, TXT, CSV, JSON, MD, HTML, XLSX — processed via OmniDoc into RAG knowledge base
               </p>
             </div>
           </div>
@@ -184,7 +287,7 @@ export function AIInsights() {
             ref={fileInputRef}
             type="file"
             multiple
-            accept=".pdf,.docx,.txt,.csv,.json,.md"
+            accept=".pdf,.docx,.txt,.csv,.json,.md,.html,.xlsx,.xls,.pptx,.rtf"
             aria-label="Upload documents"
             className="hidden"
             onChange={(e) => {
@@ -210,8 +313,20 @@ export function AIInsights() {
                 <div className="flex-1 min-w-0">
                   <div className="text-[11px] text-foreground truncate">{u.name}</div>
                   {u.status === 'done' && (
-                    <div className="text-[12px] text-muted-foreground">
-                      {u.chunks} chunks embedded ({((u.textLength || 0) / 1000).toFixed(1)}K chars)
+                    <div className="text-[12px] text-muted-foreground flex items-center gap-2">
+                      <span>{u.chunks} chunks ({((u.textLength || 0) / 1000).toFixed(1)}K chars)</span>
+                      {u.tables != null && u.tables > 0 && (
+                        <span className="flex items-center gap-0.5">
+                          <Table2 className="w-3 h-3 text-cyan-400" />
+                          {u.tables}
+                        </span>
+                      )}
+                      {u.images != null && u.images > 0 && (
+                        <span className="flex items-center gap-0.5">
+                          <Image className="w-3 h-3 text-purple-400" />
+                          {u.images}
+                        </span>
+                      )}
                     </div>
                   )}
                   {u.status === 'error' && (

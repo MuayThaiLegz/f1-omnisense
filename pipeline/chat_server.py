@@ -9,11 +9,14 @@ Usage:
 
 from __future__ import annotations
 
+import logging
 import os
 import sys
 import json
 import tempfile
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 import numpy as np
 
@@ -36,6 +39,9 @@ from pipeline.model_3d_server import router as model_3d_router, mount_3d_static
 from pipeline.omni_health_router import router as omni_health_router
 from pipeline.omni_analytics_router import router as omni_analytics_router
 from pipeline.omni_rag_router import router as omni_rag_router
+from pipeline.omni_kex_router import router as omni_kex_router
+from pipeline.omni_doc_router import router as omni_doc_router
+from pipeline.omni_data_router import router as omni_data_router
 from pipeline.opponents.server import router as opponents_router
 
 # ── Config ───────────────────────────────────────────────────────────────
@@ -60,6 +66,9 @@ mount_3d_static(app)
 app.include_router(omni_health_router)
 app.include_router(omni_analytics_router)
 app.include_router(omni_rag_router)
+app.include_router(omni_kex_router)
+app.include_router(omni_doc_router)
+app.include_router(omni_data_router)
 app.include_router(opponents_router)
 
 # Lazy-init singletons
@@ -386,10 +395,29 @@ EXTRACTORS = {
 
 
 @app.post("/upload")
+@app.post("/api/upload")
 async def upload_document(file: UploadFile = File(...)):
-    """Upload a document, extract text, embed, and ingest into the knowledge base."""
+    """Upload a document, extract text, embed, and ingest into the knowledge base.
+
+    Tries OmniDoc enhanced processing first (richer metadata, table extraction),
+    falls back to legacy extractor if OmniDoc is unavailable.
+    """
     filename = file.filename or "unknown"
     ext = Path(filename).suffix.lower()
+
+    # Try OmniDoc route first (supports more formats, extracts tables/tags)
+    try:
+        from pipeline.omni_doc_router import upload_and_ingest
+        # Reset file position and delegate
+        await file.seek(0)
+        return await upload_and_ingest(file=file)
+    except ImportError:
+        pass
+    except Exception as e:
+        logger.warning("OmniDoc upload failed (%s), falling back to legacy", e)
+
+    # Legacy fallback
+    await file.seek(0)
 
     if ext not in ALLOWED_EXTENSIONS:
         return {"filename": filename, "status": "error",
