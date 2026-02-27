@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import {
   Send, Bot, User, Loader2, Sparkles,
-  FileText, BookOpen, Cog, Ruler, Database,
+  FileText, BookOpen, Cog, Ruler, Database, RotateCcw,
 } from 'lucide-react';
 
 interface ChatMessage {
@@ -40,6 +40,8 @@ export function Chatbot() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [expandedSources, setExpandedSources] = useState<number | null>(null);
+  const [sessionId, setSessionId] = useState<string | null>(() => localStorage.getItem('omni_chat_session'));
+  const [modelUsed, setModelUsed] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -56,18 +58,41 @@ export function Chatbot() {
     setLoading(true);
 
     try {
-      const res = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: text.trim(),
-          history: messages.slice(-10).map(m => ({ role: m.role, content: m.content })),
-        }),
-      });
+      // Try OmniRAG endpoint first (server-side session), fall back to legacy /api/chat
+      let data: any;
+      try {
+        const omniRes = await fetch('/api/omni/rag/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message: text.trim(),
+            session_id: sessionId,
+          }),
+        });
+        if (omniRes.ok) {
+          data = await omniRes.json();
+          if (data.session_id) {
+            setSessionId(data.session_id);
+            localStorage.setItem('omni_chat_session', data.session_id);
+          }
+          if (data.model_used) setModelUsed(data.model_used);
+        }
+      } catch { /* OmniRAG unavailable, fall through */ }
 
-      if (!res.ok) throw new Error(`Server error: ${res.status}`);
+      if (!data) {
+        const res = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message: text.trim(),
+            history: messages.slice(-10).map(m => ({ role: m.role, content: m.content })),
+          }),
+        });
+        if (!res.ok) throw new Error(`Server error: ${res.status}`);
+        data = await res.json();
+        setModelUsed(null);
+      }
 
-      const data = await res.json();
       const assistantMsg: ChatMessage = {
         role: 'assistant',
         content: data.answer,
@@ -151,11 +176,29 @@ export function Chatbot() {
         </div>
         <div className="flex items-center justify-between mt-2 px-1">
           <span className="text-[11px] text-muted-foreground">
-            Powered by Groq Llama 3.3 70B + Atlas Vector Search
+            {modelUsed ? `Model: ${modelUsed}` : 'Powered by Groq Llama 3.3 70B'} + Atlas Vector Search
           </span>
-          <span className="text-[11px] text-muted-foreground">
-            {messages.filter(m => m.role === 'user').length} queries this session
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] text-muted-foreground">
+              {messages.filter(m => m.role === 'user').length} queries
+            </span>
+            {messages.length > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  setMessages([]);
+                  setSessionId(null);
+                  setModelUsed(null);
+                  localStorage.removeItem('omni_chat_session');
+                }}
+                className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-[#FF8000] transition-colors"
+                title="New conversation"
+              >
+                <RotateCcw className="w-3 h-3" />
+                New
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>

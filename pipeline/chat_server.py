@@ -35,11 +35,14 @@ from pipeline.embeddings import NomicEmbedder
 from pipeline.model_3d_server import router as model_3d_router, mount_3d_static
 from pipeline.omni_health_router import router as omni_health_router
 from pipeline.omni_analytics_router import router as omni_analytics_router
+from pipeline.omni_rag_router import router as omni_rag_router
+from pipeline.opponents.server import router as opponents_router
 
 # ── Config ───────────────────────────────────────────────────────────────
 
 GROQ_MODEL = os.getenv("GROQ_REASONING_MODEL", "llama-3.3-70b-versatile")
 PORT = int(os.getenv("PORT", os.getenv("API_PORT", "8100")))
+USE_OMNIRAG = os.getenv("USE_OMNIRAG", "").lower() in ("1", "true", "yes")
 
 app = FastAPI(title="F1 OmniSense API")
 app.add_middleware(
@@ -56,6 +59,8 @@ mount_3d_static(app)
 # Mount OmniSuite routers
 app.include_router(omni_health_router)
 app.include_router(omni_analytics_router)
+app.include_router(omni_rag_router)
+app.include_router(opponents_router)
 
 # Lazy-init singletons
 _groq: Groq | None = None
@@ -240,7 +245,12 @@ Answer based on the context above. Cite regulation IDs and page numbers where ap
 @app.post("/chat", response_model=ChatResponse)
 @app.post("/api/chat", response_model=ChatResponse)
 def chat(req: ChatRequest):
-    """RAG chat endpoint."""
+    """RAG chat endpoint. Delegates to OmniRAG when USE_OMNIRAG=true."""
+    if USE_OMNIRAG:
+        from pipeline.omni_rag_router import chat as _omni_chat, ChatRequest as _OmniReq
+        result = _omni_chat(_OmniReq(message=req.message))
+        return ChatResponse(answer=result["answer"], sources=result.get("sources", []))
+
     # 1. Retrieve context
     sources = retrieve_context(req.message, k=8)
 
