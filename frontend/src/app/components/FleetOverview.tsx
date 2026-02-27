@@ -177,6 +177,7 @@ export function FleetOverview() {
   const [vehicles, setVehicles] = useState<VehicleData[]>([]);
   const [selectedCar, setSelectedCar] = useState<VehicleData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [liveSource, setLiveSource] = useState<'cached' | 'live' | null>(null);
 
   // Registration state
   const [showRegister, setShowRegister] = useState(false);
@@ -256,6 +257,52 @@ export function FleetOverview() {
     load();
   }, []);
 
+  // Try OmniHealth live data — non-blocking, falls back to cached anomaly snapshot
+  useEffect(() => {
+    if (vehicles.length === 0) return;
+    const fetchLive = async () => {
+      try {
+        const res = await fetch('/api/omni/health/fleet');
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!data.drivers?.length) return;
+
+        setVehicles(prev => prev.map(v => {
+          const live = data.drivers.find((d: any) => d.code === v.code);
+          if (!live || live.error || !live.components) return v;
+
+          // Merge live OmniHealth components into existing SystemHealth shape
+          const liveSystemMap = new Map<string, any>();
+          for (const comp of live.components) {
+            liveSystemMap.set(comp.component, comp);
+          }
+
+          const systems = v.systems.map(sys => {
+            const lc = liveSystemMap.get(sys.name);
+            if (!lc) return sys;
+            return {
+              ...sys,
+              health: Math.round(lc.health_pct),
+              level: mapLevel(lc.severity),
+              maintenanceAction: lc.action,
+            };
+          });
+
+          return {
+            ...v,
+            overallHealth: Math.round(live.overall_health),
+            level: mapLevel(live.overall_risk),
+            systems,
+          };
+        }));
+        setLiveSource('live');
+      } catch {
+        setLiveSource('cached');
+      }
+    };
+    fetchLive();
+  }, [vehicles.length > 0]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Race-by-race trend from anomaly data
   const trendData = useMemo(() => {
     if (!selectedCar) return [];
@@ -306,6 +353,15 @@ export function FleetOverview() {
         <div className="flex items-center gap-2 bg-[#1A1F2E] rounded-lg px-3 py-2 border border-[rgba(255,128,0,0.12)]">
           <CircleDot className="w-3 h-3 text-[#FF8000]" />
           <span className="text-[12px] text-muted-foreground">{vehicles.length + registeredVehicles.length} vehicles</span>
+          {liveSource && (
+            <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${
+              liveSource === 'live'
+                ? 'bg-green-500/10 text-green-400 border border-green-500/20'
+                : 'bg-gray-500/10 text-gray-400 border border-gray-500/20'
+            }`}>
+              {liveSource === 'live' ? 'LIVE' : 'CACHED'}
+            </span>
+          )}
         </div>
         {(['nominal', 'warning', 'critical'] as HealthLevel[]).map(level => {
           const count = vehicles.filter(v => v.level === level).length;

@@ -33,6 +33,8 @@ from groq import Groq
 from pipeline.vectorstore import AtlasVectorStore
 from pipeline.embeddings import NomicEmbedder
 from pipeline.model_3d_server import router as model_3d_router, mount_3d_static
+from pipeline.omni_health_router import router as omni_health_router
+from pipeline.omni_analytics_router import router as omni_analytics_router
 
 # ── Config ───────────────────────────────────────────────────────────────
 
@@ -50,6 +52,10 @@ app.add_middleware(
 # Mount 3D model generation routes
 app.include_router(model_3d_router)
 mount_3d_static(app)
+
+# Mount OmniSuite routers
+app.include_router(omni_health_router)
+app.include_router(omni_analytics_router)
 
 # Lazy-init singletons
 _groq: Groq | None = None
