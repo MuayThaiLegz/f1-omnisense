@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>F1 OmniSense — Backend Architecture</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #0a0e17; color: #e0e0e0; font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace; overflow-x: hidden; }
+
+  .header { text-align: center; padding: 40px 20px 20px; }
+  .header h1 { font-size: 28px; color: #FF8000; letter-spacing: 2px; }
+  .header .sub { color: #666; font-size: 13px; margin-top: 6px; }
+
+  .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+
+  /* Top-level architecture diagram */
+  .arch-diagram { display: flex; align-items: center; justify-content: center; gap: 16px; padding: 30px 20px; flex-wrap: wrap; }
+  .arch-box { border: 1px solid #333; border-radius: 10px; padding: 18px 22px; text-align: center; min-width: 160px; position: relative; }
+  .arch-box h3 { font-size: 14px; margin-bottom: 6px; }
+  .arch-box .port { font-size: 11px; color: #888; }
+  .arch-box .tech { font-size: 10px; color: #555; margin-top: 4px; }
+  .arch-arrow { color: #FF8000; font-size: 24px; font-weight: bold; }
+  .box-frontend { border-color: #3b82f6; background: #3b82f611; }
+  .box-frontend h3 { color: #3b82f6; }
+  .box-backend { border-color: #FF8000; background: #FF800011; }
+  .box-backend h3 { color: #FF8000; }
+  .box-mongo { border-color: #10b981; background: #10b98111; }
+  .box-mongo h3 { color: #10b981; }
+  .box-ollama { border-color: #a855f7; background: #a855f711; }
+  .box-ollama h3 { color: #a855f7; }
+  .box-external { border-color: #f43f5e; background: #f43f5e11; }
+  .box-external h3 { color: #f43f5e; }
+
+  /* Section */
+  .section { margin: 30px 0; }
+  .section-title { font-size: 18px; color: #FF8000; border-bottom: 1px solid #222; padding-bottom: 8px; margin-bottom: 16px; display: flex; align-items: center; gap: 10px; }
+  .section-title .badge { font-size: 11px; background: #FF800022; color: #FF8000; padding: 2px 8px; border-radius: 4px; }
+
+  /* Endpoint tables */
+  table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 20px; }
+  th { text-align: left; color: #888; font-size: 11px; padding: 8px 10px; border-bottom: 1px solid #222; text-transform: uppercase; letter-spacing: 1px; }
+  td { padding: 7px 10px; border-bottom: 1px solid #151a25; vertical-align: top; }
+  tr:hover td { background: #111622; }
+  .method { font-weight: bold; font-size: 11px; padding: 2px 6px; border-radius: 3px; }
+  .method-get { color: #10b981; background: #10b98118; }
+  .method-post { color: #3b82f6; background: #3b82f618; }
+  .path { color: #e2e8f0; }
+  .stub { color: #555; font-style: italic; }
+
+  /* Module map */
+  .module-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
+  .module-card { border: 1px solid #1e2536; border-radius: 8px; padding: 14px 16px; background: #0d1220; }
+  .module-card h4 { font-size: 13px; color: #e2e8f0; margin-bottom: 6px; }
+  .module-card .file { font-size: 11px; color: #555; margin-bottom: 8px; }
+  .module-card .desc { font-size: 12px; color: #999; line-height: 1.5; }
+  .module-card .deps { font-size: 11px; color: #666; margin-top: 8px; }
+  .module-card .deps span { color: #FF8000; }
+
+  /* Collections */
+  .coll-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+  .coll-card { border: 1px solid #10b98133; border-radius: 8px; padding: 12px 14px; background: #10b98108; }
+  .coll-card h4 { font-size: 13px; color: #10b981; margin-bottom: 4px; }
+  .coll-card .info { font-size: 11px; color: #777; line-height: 1.6; }
+
+  /* Env vars */
+  .env-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 10px; }
+  .env-row { display: flex; gap: 10px; align-items: baseline; padding: 6px 10px; border-radius: 4px; background: #111622; font-size: 12px; }
+  .env-key { color: #FF8000; min-width: 200px; }
+  .env-default { color: #555; }
+  .env-used { color: #888; font-size: 11px; }
+
+  /* External APIs */
+  .api-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
+  .api-card { border: 1px solid #f43f5e33; border-radius: 8px; padding: 14px 16px; background: #f43f5e08; }
+  .api-card h4 { font-size: 14px; margin-bottom: 6px; }
+  .api-card .info { font-size: 12px; color: #999; line-height: 1.6; }
+  .api-card .endpoint { font-size: 11px; color: #666; font-family: monospace; }
+  .tag { display: inline-block; font-size: 10px; padding: 1px 6px; border-radius: 3px; margin-right: 4px; }
+  .tag-groq { background: #06b6d422; color: #06b6d4; }
+  .tag-ollama { background: #a855f722; color: #a855f7; }
+  .tag-meshy { background: #f59e0b22; color: #f59e0b; }
+  .tag-tripo { background: #ec489922; color: #ec4899; }
+  .tag-trellis { background: #8b5cf622; color: #8b5cf6; }
+  .tag-hunyuan { background: #ef444422; color: #ef4444; }
+
+  /* Data flow */
+  .flow { background: #0d1220; border: 1px solid #1e2536; border-radius: 8px; padding: 20px; margin-bottom: 16px; }
+  .flow h4 { font-size: 14px; color: #e2e8f0; margin-bottom: 12px; }
+  .flow-steps { font-size: 12px; color: #999; line-height: 2; }
+  .flow-steps .step { display: flex; align-items: flex-start; gap: 10px; }
+  .flow-steps .arrow { color: #FF8000; min-width: 20px; text-align: center; }
+  .flow-steps .label { color: #e2e8f0; }
+  .flow-steps .detail { color: #666; }
+
+  /* Observations */
+  .obs-list { list-style: none; }
+  .obs-list li { padding: 8px 12px; border-left: 3px solid #333; margin-bottom: 8px; font-size: 12px; line-height: 1.6; color: #999; }
+  .obs-list li.good { border-color: #10b981; }
+  .obs-list li.warn { border-color: #f59e0b; }
+  .obs-list li strong { color: #e2e8f0; }
+
+  .footer { text-align: center; padding: 40px; color: #333; font-size: 11px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>F1 OMNISENSE &mdash; BACKEND ARCHITECTURE</h1>
+  <div class="sub">pipeline/ &bull; FastAPI &bull; MongoDB Atlas &bull; Port 8100</div>
+</div>
+
+<div class="container">
+
+<!-- ─── HIGH-LEVEL ARCHITECTURE ─── -->
+<div class="arch-diagram">
+  <div class="arch-box box-frontend">
+    <h3>Frontend</h3>
+    <div class="port">Vite :5173 / Vercel</div>
+    <div class="tech">React + Three.js</div>
+  </div>
+  <div class="arch-arrow">&rarr;</div>
+  <div class="arch-box box-backend">
+    <h3>Backend (FastAPI)</h3>
+    <div class="port">:8100 (Railway)</div>
+    <div class="tech">chat_server.py + model_3d_server.py</div>
+  </div>
+  <div class="arch-arrow">&rarr;</div>
+  <div class="arch-box box-mongo">
+    <h3>MongoDB Atlas</h3>
+    <div class="port">McLaren_f1</div>
+    <div class="tech">8 collections + GridFS</div>
+  </div>
+</div>
+<div class="arch-diagram">
+  <div class="arch-box box-ollama">
+    <h3>Ollama</h3>
+    <div class="port">:11434 (local)</div>
+    <div class="tech">nomic-embed-text, gemma3, qwen3-vl</div>
+  </div>
+  <div class="arch-arrow">&rarr;</div>
+  <div class="arch-box box-backend" style="border-style: dashed;">
+    <h3>Backend</h3>
+    <div class="port">embeddings + edge mode</div>
+  </div>
+  <div class="arch-arrow">&larr;</div>
+  <div class="arch-box box-external">
+    <h3>Cloud APIs</h3>
+    <div class="port">Groq &bull; Meshy &bull; Tripo &bull; fal.ai</div>
+    <div class="tech">LLM + 3D generation</div>
+  </div>
+</div>
+
+<!-- ─── ENDPOINTS ─── -->
+<div class="section">
+  <div class="section-title">API Endpoints <span class="badge">chat_server.py</span></div>
+
+  <h4 style="color:#e2e8f0; font-size:13px; margin: 16px 0 8px;">RAG & Core</h4>
+  <table>
+    <tr><th>Method</th><th>Path</th><th>Description</th></tr>
+    <tr><td><span class="method method-post">POST</span></td><td class="path">/api/chat</td><td>RAG chat &mdash; vector search &rarr; Groq LLM &rarr; {answer, sources}</td></tr>
+    <tr><td><span class="method method-post">POST</span></td><td class="path">/chat</td><td>Alias of /api/chat</td></tr>
+    <tr><td><span class="method method-get">GET</span></td><td class="path">/health</td><td>Status + GROQ model + doc count in f1_knowledge</td></tr>
+    <tr><td><span class="method method-post">POST</span></td><td class="path">/upload</td><td>PDF/DOCX/TXT &rarr; chunk &rarr; embed (Nomic 768d) &rarr; upsert Atlas</td></tr>
+    <tr><td><span class="method method-get">GET</span></td><td class="path">/visual-search?q=&amp;k=</td><td>CLIP text-to-image search against clip_index.json</td></tr>
+    <tr><td><span class="method method-get">GET</span></td><td class="path">/visual-tags</td><td>All images with auto-tags for gallery UI</td></tr>
+  </table>
+
+  <h4 style="color:#e2e8f0; font-size:13px; margin: 16px 0 8px;">Jolpica (Race Data)</h4>
+  <table>
+    <tr><th>Method</th><th>Path</th><th>Description</th></tr>
+    <tr><td><span class="method method-get">GET</span></td><td class="path">/api/local/jolpica/race_results</td><td>All race results from <code>race_results</code> collection</td></tr>
+    <tr><td><span class="method method-get">GET</span></td><td class="path">/api/local/jolpica/driver_standings</td><td>Computed cumulative driver standings</td></tr>
+    <tr><td><span class="method method-get">GET</span></td><td class="path">/api/local/jolpica/constructor_standings</td><td>Computed cumulative constructor standings</td></tr>
+    <tr><td><span class="method method-get">GET</span></td><td class="path">/api/local/jolpica/qualifying</td><td class="stub">Stub &mdash; returns []</td></tr>
+    <tr><td><span class="method method-get">GET</span></td><td class="path">/api/local/jolpica/circuits</td><td class="stub">Stub &mdash; returns []</td></tr>
+    <tr><td><span class="method method-get">GET</span></td><td class="path">/api/local/jolpica/pit_stops</td><td class="stub">Stub &mdash; returns []</td></tr>
+    <tr><td><span class="method method-get">GET</span></td><td class="path">/api/local/jolpica/lap_times</td><td class="stub">Stub &mdash; returns []</td></tr>
+    <tr><td><span class="method method-get">GET</span></td><td class="path">/api/local/jolpica/drivers</td><td class="stub">Stub &mdash; returns []</td></tr>
+    <tr><td><span class="method method-get">GET</span></td><td class="path">/api/local/jolpica/seasons</td><td class="stub">Stub &mdash; returns []</td></tr>
+  </table>
+
+  <h4 style="color:#e2e8f0; font-size:13px; margin: 16px 0 8px;">OpenF1-Compatible Telemetry</h4>
+  <table>
+    <tr><th>Method</th><th>Path</th><th>Description</th></tr>
+    <tr><td><span class="method method-get">GET</span></td><td class="path">/api/local/openf1/sessions</td><td>Sessions from telemetry _source_file distinct values</td></tr>
+    <tr><td><span class="method method-get">GET</span></td><td class="path">/api/local/openf1/drivers</td><td>NOR + PIA driver records per session</td></tr>
+    <tr><td><span class="method method-get">GET</span></td><td class="path">/api/local/openf1/laps</td><td>Per-lap telemetry aggregation</td></tr>
+    <tr><td><span class="method method-get">GET</span></td><td class="path">/api/local/openf1/position</td><td>Position data from lap aggregation</td></tr>
+    <tr><td><span class="method method-get">GET</span></td><td class="path">/api/local/openf1/pit</td><td>Pit events from compound change boundaries</td></tr>
+    <tr><td><span class="method method-get">GET</span></td><td class="path">/api/local/openf1/stints</td><td>Stint data (compound + lap range) per driver/race</td></tr>
+    <tr><td><span class="method method-get">GET</span></td><td class="path">/api/local/openf1/weather</td><td class="stub">Placeholder weather (25&deg;C, 30% humidity)</td></tr>
+    <tr><td><span class="method method-get">GET</span></td><td class="path">/api/local/openf1/race_control</td><td class="stub">Single GREEN flag per session</td></tr>
+    <tr><td><span class="method method-get">GET</span></td><td class="path">/api/local/openf1/intervals</td><td class="stub">Returns []</td></tr>
+  </table>
+
+  <h4 style="color:#e2e8f0; font-size:13px; margin: 16px 0 8px;">Car &amp; Driver Telemetry (CSV)</h4>
+  <table>
+    <tr><th>Method</th><th>Path</th><th>Description</th></tr>
+    <tr><td><span class="method method-get">GET</span></td><td class="path">/api/local/mccar-summary/{year}/{driver}</td><td>Aggregated car telemetry per race (speed, RPM, throttle, brake, DRS)</td></tr>
+    <tr><td><span class="method method-get">GET</span></td><td class="path">/api/local/mcdriver-summary/{year}/{driver}</td><td>Biometric summary per race (HR, temp &mdash; partially synthetic)</td></tr>
+    <tr><td><span class="method method-get">GET</span></td><td class="path">/api/local/mccar/{year}/{filename}</td><td>Raw telemetry CSV from <code>telemetry</code> collection</td></tr>
+    <tr><td><span class="method method-get">GET</span></td><td class="path">/api/local/mcdriver/{year}/{filename}</td><td>Biometric CSV from <code>biometrics</code> (fallback: telemetry)</td></tr>
+    <tr><td><span class="method method-get">GET</span></td><td class="path">/api/local/mcracecontext/{year}/tire_stints.csv</td><td>Tire stint CSV per driver/race/compound</td></tr>
+    <tr><td><span class="method method-get">GET</span></td><td class="path">/api/local/mccsv/driver_career</td><td>Career stats CSV for NOR and PIA</td></tr>
+  </table>
+
+  <h4 style="color:#e2e8f0; font-size:13px; margin: 16px 0 8px;">F1 Data (CSV from Vercel format)</h4>
+  <table>
+    <tr><th>Method</th><th>Path</th><th>Description</th></tr>
+    <tr><td><span class="method method-get">GET</span></td><td class="path">/api/local/f1data/McResults/{year}/championship_drivers.csv</td><td>Race-by-race cumulative championship points</td></tr>
+    <tr><td><span class="method method-get">GET</span></td><td class="path">/api/local/f1data/McResults/{year}/championship_teams.csv</td><td>Race-by-race team championship points</td></tr>
+    <tr><td><span class="method method-get">GET</span></td><td class="path">/api/local/f1data/McResults/{year}/session_results.csv</td><td>Session results per driver per race</td></tr>
+    <tr><td><span class="method method-get">GET</span></td><td class="path">/api/local/f1data/McResults/{year}/overtakes.csv</td><td>Positions gained (grid - finish)</td></tr>
+    <tr><td><span class="method method-get">GET</span></td><td class="path">/api/local/f1data/McStrategy/{year}/pit_stops.csv</td><td>Pit stop events from compound boundaries</td></tr>
+  </table>
+
+  <h4 style="color:#e2e8f0; font-size:13px; margin: 16px 0 8px;">Pipeline Intelligence &amp; Anomaly</h4>
+  <table>
+    <tr><th>Method</th><th>Path</th><th>Description</th></tr>
+    <tr><td><span class="method method-get">GET</span></td><td class="path">/api/local/pipeline/anomaly</td><td>Full anomaly scores from <code>anomaly_scores_snapshot</code></td></tr>
+    <tr><td><span class="method method-get">GET</span></td><td class="path">/api/local/pipeline/intelligence</td><td>Structured rules/equipment/dimensions from f1_knowledge</td></tr>
+    <tr><td><span class="method method-get">GET</span></td><td class="path">/api/local/pipeline/gdino</td><td class="stub">Stub &mdash; returns {}</td></tr>
+    <tr><td><span class="method method-get">GET</span></td><td class="path">/api/local/pipeline/fused</td><td class="stub">Stub &mdash; returns {}</td></tr>
+    <tr><td><span class="method method-get">GET</span></td><td class="path">/api/local/pipeline/minicpm</td><td class="stub">Stub &mdash; returns {}</td></tr>
+    <tr><td><span class="method method-get">GET</span></td><td class="path">/api/local/pipeline/videomae</td><td class="stub">Stub &mdash; returns {}</td></tr>
+    <tr><td><span class="method method-get">GET</span></td><td class="path">/api/local/pipeline/timesformer</td><td class="stub">Stub &mdash; returns {}</td></tr>
+  </table>
+
+  <h4 style="color:#e2e8f0; font-size:13px; margin: 16px 0 8px;">GLB Model Serving</h4>
+  <table>
+    <tr><th>Method</th><th>Path</th><th>Description</th></tr>
+    <tr><td><span class="method method-get">GET</span></td><td class="path">/api/models/{filename}</td><td>Stream GLB from MongoDB GridFS (256KB chunks, cached)</td></tr>
+  </table>
+</div>
+
+<!-- ─── 3D GENERATION ENDPOINTS ─── -->
+<div class="section">
+  <div class="section-title">3D Generation Endpoints <span class="badge">model_3d_server.py &bull; prefix /api/3d-gen</span></div>
+  <table>
+    <tr><th>Method</th><th>Path</th><th>Description</th></tr>
+    <tr><td><span class="method method-post">POST</span></td><td class="path">/api/3d-gen/generate</td><td>Upload image &rarr; background job &rarr; {job_id, provider, model_name}</td></tr>
+    <tr><td><span class="method method-post">POST</span></td><td class="path">/api/3d-gen/regenerate/{model_name}</td><td>Regenerate with Meshy using existing input image</td></tr>
+    <tr><td><span class="method method-get">GET</span></td><td class="path">/api/3d-gen/jobs/{job_id}</td><td>Poll job status (in-memory dict)</td></tr>
+    <tr><td><span class="method method-get">GET</span></td><td class="path">/api/3d-gen/jobs</td><td>List all jobs</td></tr>
+    <tr><td><span class="method method-get">GET</span></td><td class="path">/api/3d-gen/models</td><td>List models (local filesystem + MongoDB generated_models)</td></tr>
+    <tr><td><span class="method method-get">GET</span></td><td class="path">/api/3d-gen/models/{name}/glb</td><td>Download GLB (local first, GridFS fallback)</td></tr>
+    <tr><td><span class="method method-post">POST</span></td><td class="path">/api/3d-gen/apply-texture/{name}</td><td>Apply PBR material preset to Hunyuan GLB</td></tr>
+    <tr><td><span class="method method-get">GET</span></td><td class="path">/api/3d-gen/quality/{name}</td><td>Mesh quality info (vertices, faces, bbox) via trimesh</td></tr>
+    <tr><td><span class="method method-get">GET</span></td><td class="path">/api/3d-gen/texture-paint/status</td><td>Check if TEXTure GPU painting is available</td></tr>
+    <tr><td><span class="method method-get">GET</span></td><td class="path">/api/3d-gen/material-presets</td><td>8 F1-themed PBR material presets</td></tr>
+  </table>
+</div>
+
+<!-- ─── MONGODB COLLECTIONS ─── -->
+<div class="section">
+  <div class="section-title">MongoDB Collections <span class="badge">McLaren_f1</span></div>
+  <div class="coll-grid">
+    <div class="coll-card">
+      <h4>f1_knowledge</h4>
+      <div class="info">
+        768-dim nomic embeddings + text chunks<br>
+        <strong>Written by:</strong> ingest_knowledge.py, /upload<br>
+        <strong>Read by:</strong> /api/chat (vector search), /pipeline/intelligence<br>
+        <strong>Index:</strong> vector_index (cosine, 768d)
+      </div>
+    </div>
+    <div class="coll-card">
+      <h4>telemetry</h4>
+      <div class="info">
+        Raw car telemetry rows (RPM, Speed, Throttle, Brake, DRS...)<br>
+        <strong>Written by:</strong> push_csv_to_mongo.py, migrate<br>
+        <strong>Read by:</strong> /openf1/*, /mccar/*, /mcracecontext/*, /f1data/*
+      </div>
+    </div>
+    <div class="coll-card">
+      <h4>biometrics</h4>
+      <div class="info">
+        Driver biometric data from McDriver CSVs<br>
+        <strong>Written by:</strong> migrate_to_mclaren_f1.py<br>
+        <strong>Read by:</strong> /mcdriver/{year}/{filename}
+      </div>
+    </div>
+    <div class="coll-card">
+      <h4>race_results</h4>
+      <div class="info">
+        Race results from Jolpica (positions, points, drivers)<br>
+        <strong>Written by:</strong> migrate_to_mclaren_f1.py<br>
+        <strong>Read by:</strong> /jolpica/*, /f1data/*, /mccsv/driver_career
+      </div>
+    </div>
+    <div class="coll-card">
+      <h4>anomaly_scores_snapshot</h4>
+      <div class="info">
+        Full anomaly pipeline output (single document)<br>
+        <strong>Written by:</strong> run_f1_anomaly.py<br>
+        <strong>Read by:</strong> /pipeline/anomaly
+      </div>
+    </div>
+    <div class="coll-card">
+      <h4>generated_models</h4>
+      <div class="info">
+        3D model metadata (persists across deploys)<br>
+        <strong>Written by:</strong> generate_3d.py (after GridFS push)<br>
+        <strong>Read by:</strong> /api/3d-gen/models
+      </div>
+    </div>
+    <div class="coll-card">
+      <h4>GridFS (fs.files + fs.chunks)</h4>
+      <div class="info">
+        Binary GLB 3D model files<br>
+        <strong>Written by:</strong> generate_3d.py (_push_glb_to_gridfs)<br>
+        <strong>Read by:</strong> /api/models/{filename}, /api/3d-gen/models/{name}/glb
+      </div>
+    </div>
+    <div class="coll-card">
+      <h4>anomaly_scores</h4>
+      <div class="info">
+        Per-driver-per-race anomaly documents<br>
+        <strong>Written by:</strong> migrate_to_mclaren_f1.py<br>
+        <strong>Read by:</strong> (not directly &mdash; snapshot is used)
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── EXTERNAL APIS ─── -->
+<div class="section">
+  <div class="section-title">External APIs</div>
+  <div class="api-grid">
+    <div class="api-card">
+      <h4><span class="tag tag-groq">GROQ</span> Groq Cloud LLM</h4>
+      <div class="info">
+        <strong>RAG:</strong> llama-3.3-70b-versatile<br>
+        <strong>Vision:</strong> llama-4-maverick-17b-128e-instruct<br>
+        <strong>Key:</strong> GROQ_API_KEY<br>
+        <strong>Used in:</strong> chat_server.py, models.py
+      </div>
+    </div>
+    <div class="api-card">
+      <h4><span class="tag tag-ollama">LOCAL</span> Ollama</h4>
+      <div class="info">
+        <strong>Embeddings:</strong> nomic-embed-text (768d)<br>
+        <strong>Edge LLM:</strong> gemma3:4b, qwen3-vl:8b<br>
+        <strong>URL:</strong> OLLAMA_URL (:11434)<br>
+        <strong>Used in:</strong> embeddings.py, models.py
+      </div>
+    </div>
+    <div class="api-card">
+      <h4><span class="tag tag-meshy">3D</span> Meshy.ai</h4>
+      <div class="info">
+        <strong>API:</strong> Image-to-3D generation<br>
+        <strong>Key:</strong> MESHY_API_KEY<br>
+        <strong>Flow:</strong> POST image &rarr; poll task &rarr; download GLB
+      </div>
+    </div>
+    <div class="api-card">
+      <h4><span class="tag tag-tripo">3D</span> Tripo AI</h4>
+      <div class="info">
+        <strong>API:</strong> Image-to-3D (v2.5)<br>
+        <strong>Key:</strong> TRIPO_API_KEY<br>
+        <strong>Flow:</strong> Upload STS &rarr; create task &rarr; poll &rarr; download PBR GLB
+      </div>
+    </div>
+    <div class="api-card">
+      <h4><span class="tag tag-trellis">3D</span> fal.ai / TRELLIS-2</h4>
+      <div class="info">
+        <strong>API:</strong> Image-to-3D generation<br>
+        <strong>Key:</strong> FAL_KEY<br>
+        <strong>Cost:</strong> ~$0.02/generation<br>
+        <strong>Flow:</strong> POST base64 &rarr; poll queue &rarr; download GLB
+      </div>
+    </div>
+    <div class="api-card">
+      <h4><span class="tag tag-hunyuan">3D</span> Hunyuan3D (GCP VM)</h4>
+      <div class="info">
+        <strong>API:</strong> REST proxy on GCP VM<br>
+        <strong>URL:</strong> HUNYUAN_REST_URL (34.48.15.70:5432)<br>
+        <strong>Status:</strong> Currently disabled<br>
+        <strong>Flow:</strong> POST image &rarr; poll job &rarr; download GLB
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── MODULE MAP ─── -->
+<div class="section">
+  <div class="section-title">Module Dependency Map</div>
+  <div class="module-grid">
+    <div class="module-card">
+      <h4>chat_server.py</h4>
+      <div class="file">pipeline/chat_server.py &bull; Main entry point</div>
+      <div class="desc">FastAPI server &mdash; all endpoints, RAG pipeline, data APIs. Mounts model_3d_router at /api/3d-gen/. Lazy-init pattern for heavy objects.</div>
+      <div class="deps">Imports: <span>embeddings</span>, <span>vectorstore</span>, <span>model_3d_server</span>, <span>pymongo</span>, <span>groq</span></div>
+    </div>
+    <div class="module-card">
+      <h4>model_3d_server.py</h4>
+      <div class="file">pipeline/model_3d_server.py &bull; 3D APIRouter</div>
+      <div class="desc">3D generation job management, GLB serving (local + GridFS fallback), PBR application, mesh quality analysis.</div>
+      <div class="deps">Imports: <span>texture/generate_3d</span>, <span>texture/apply_pbr</span></div>
+    </div>
+    <div class="module-card">
+      <h4>embeddings.py</h4>
+      <div class="file">pipeline/embeddings.py</div>
+      <div class="desc">NomicEmbedder (768-dim, HuggingFace) for RAG + CLIPEmbedder (512-dim, OpenCLIP) for visual search. CUDA-aware.</div>
+      <div class="deps">Imports: <span>transformers</span>, <span>open_clip</span>, <span>torch</span></div>
+    </div>
+    <div class="module-card">
+      <h4>vectorstore.py</h4>
+      <div class="file">pipeline/vectorstore.py</div>
+      <div class="desc">MongoDB Atlas vector store. Uses $vectorSearch aggregation pipeline (cosine, 768d). Upsert + query.</div>
+      <div class="deps">Imports: <span>pymongo</span>, <span>embeddings</span></div>
+    </div>
+    <div class="module-card">
+      <h4>models.py</h4>
+      <div class="file">pipeline/models.py</div>
+      <div class="desc">AI model clients: OllamaClient, GemmaClient, QwenVLClient (edge), GroqVisionClient (cloud). Used by PDF extraction pipeline.</div>
+      <div class="deps">Imports: <span>groq</span>, <span>renderer</span></div>
+    </div>
+    <div class="module-card">
+      <h4>generate_3d.py</h4>
+      <div class="file">pipeline/texture/generate_3d.py</div>
+      <div class="desc">3D generation orchestrator. Background threads, job dict, provider dispatch, GridFS push, model listing from local + MongoDB.</div>
+      <div class="deps">Imports: <span>hunyuan_client</span>, <span>meshy_client</span>, <span>tripo_client</span>, <span>trellis_client</span>, <span>apply_pbr</span></div>
+    </div>
+    <div class="module-card">
+      <h4>apply_pbr.py</h4>
+      <div class="file">pipeline/texture/apply_pbr.py</div>
+      <div class="desc">8 F1-themed PBR material presets (carbon_fiber, mclaren_papaya, etc.). Modifies GLB vertex colors and metallic/roughness via trimesh.</div>
+      <div class="deps">Imports: <span>trimesh</span>, <span>numpy</span></div>
+    </div>
+    <div class="module-card">
+      <h4>run_f1_anomaly.py</h4>
+      <div class="file">pipeline/anomaly/run_f1_anomaly.py</div>
+      <div class="desc">Full anomaly pipeline: load telemetry &rarr; ensemble (IForest + SVM + KNN + PCA) &rarr; LightGBM classifier &rarr; push to MongoDB.</div>
+      <div class="deps">Imports: <span>ensemble</span>, <span>classifier</span>, <span>pymongo</span></div>
+    </div>
+    <div class="module-card">
+      <h4>__main__.py</h4>
+      <div class="file">pipeline/__main__.py &bull; CLI</div>
+      <div class="desc">PDF extraction CLI. Edge mode (Ollama gemma+qwen consensus) or cloud mode (Groq vision). 5-pass extraction with merge.</div>
+      <div class="deps">Imports: <span>models</span>, <span>passes</span>, <span>renderer</span>, <span>merge</span>, <span>tracker</span></div>
+    </div>
+    <div class="module-card">
+      <h4>Batch Scripts</h4>
+      <div class="file">pipeline/*.py (standalone)</div>
+      <div class="desc">
+        <strong>ingest_knowledge.py</strong> &mdash; embed F1 docs &rarr; Atlas<br>
+        <strong>push_csv_to_mongo.py</strong> &mdash; McCar CSVs &rarr; telemetry<br>
+        <strong>migrate_to_mclaren_f1.py</strong> &mdash; full DB migration<br>
+        <strong>clip_index.py</strong> &mdash; build CLIP visual search index<br>
+        <strong>export_for_ui.py</strong> &mdash; extractions &rarr; intelligence.json
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── DATA FLOWS ─── -->
+<div class="section">
+  <div class="section-title">Data Flows</div>
+
+  <div class="flow">
+    <h4>RAG Chat (/api/chat)</h4>
+    <div class="flow-steps">
+      <div class="step"><span class="arrow">1.</span><span class="label">Client POST {message, history}</span></div>
+      <div class="step"><span class="arrow">2.</span><span class="label">NomicEmbedder.embed_query()</span> <span class="detail">&rarr; 768-dim vector</span></div>
+      <div class="step"><span class="arrow">3.</span><span class="label">MongoDB $vectorSearch</span> <span class="detail">&rarr; top-8 documents from f1_knowledge</span></div>
+      <div class="step"><span class="arrow">4.</span><span class="label">Build RAG prompt</span> <span class="detail">(system + context + last 10 messages + question)</span></div>
+      <div class="step"><span class="arrow">5.</span><span class="label">Groq llama-3.3-70b-versatile</span> <span class="detail">&rarr; answer text</span></div>
+      <div class="step"><span class="arrow">6.</span><span class="label">Return {answer, sources[]}</span></div>
+    </div>
+  </div>
+
+  <div class="flow">
+    <h4>3D Generation (/api/3d-gen/generate)</h4>
+    <div class="flow-steps">
+      <div class="step"><span class="arrow">1.</span><span class="label">Client POST multipart (image + provider + params)</span></div>
+      <div class="step"><span class="arrow">2.</span><span class="label">Save input_image.png &rarr; output/3d_models/{name}/</span></div>
+      <div class="step"><span class="arrow">3.</span><span class="label">Background thread: call provider API</span> <span class="detail">(meshy/tripo/trellis/hunyuan)</span></div>
+      <div class="step"><span class="arrow">4.</span><span class="label">Download GLB &rarr; save locally</span></div>
+      <div class="step"><span class="arrow">5.</span><span class="label">Apply PBR material</span> <span class="detail">(if hunyuan shape-only)</span></div>
+      <div class="step"><span class="arrow">6.</span><span class="label">Push GLBs to MongoDB GridFS</span></div>
+      <div class="step"><span class="arrow">7.</span><span class="label">Save metadata to generated_models collection</span></div>
+      <div class="step"><span class="arrow">8.</span><span class="label">Job status &rarr; "completed" (poll via /jobs/{id})</span></div>
+    </div>
+  </div>
+
+  <div class="flow">
+    <h4>Anomaly Detection (batch)</h4>
+    <div class="flow-steps">
+      <div class="step"><span class="arrow">1.</span><span class="label">Load car + bio telemetry per race per driver</span></div>
+      <div class="step"><span class="arrow">2.</span><span class="label">Merge into single DataFrame</span></div>
+      <div class="step"><span class="arrow">3.</span><span class="label">Ensemble per system:</span> <span class="detail">IsolationForest + SGD-SVM + KNN + PCA</span></div>
+      <div class="step"><span class="arrow">4.</span><span class="label">LightGBM severity classifier</span> <span class="detail">(LOO cross-val)</span></div>
+      <div class="step"><span class="arrow">5.</span><span class="label">Compute health scores &rarr; anomaly_scores.json</span></div>
+      <div class="step"><span class="arrow">6.</span><span class="label">Push to MongoDB anomaly_scores_snapshot</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── ENV VARS ─── -->
+<div class="section">
+  <div class="section-title">Environment Variables</div>
+  <div class="env-grid">
+    <div class="env-row"><span class="env-key">MONGODB_URI</span><span class="env-default">required</span></div>
+    <div class="env-row"><span class="env-key">MONGODB_DB</span><span class="env-default">McLaren_f1</span></div>
+    <div class="env-row"><span class="env-key">GROQ_API_KEY</span><span class="env-default">required</span></div>
+    <div class="env-row"><span class="env-key">GROQ_REASONING_MODEL</span><span class="env-default">llama-3.3-70b-versatile</span></div>
+    <div class="env-row"><span class="env-key">GROQ_VISION_MODEL</span><span class="env-default">llama-4-maverick-17b</span></div>
+    <div class="env-row"><span class="env-key">OLLAMA_URL</span><span class="env-default">http://localhost:11434</span></div>
+    <div class="env-row"><span class="env-key">GEMMA_MODEL_TAG</span><span class="env-default">gemma3:4b</span></div>
+    <div class="env-row"><span class="env-key">QWEN_MODEL_TAG</span><span class="env-default">qwen3-vl:8b</span></div>
+    <div class="env-row"><span class="env-key">MESHY_API_KEY</span><span class="env-default">optional</span></div>
+    <div class="env-row"><span class="env-key">TRIPO_API_KEY</span><span class="env-default">optional</span></div>
+    <div class="env-row"><span class="env-key">FAL_KEY</span><span class="env-default">optional</span></div>
+    <div class="env-row"><span class="env-key">HUNYUAN_REST_URL</span><span class="env-default">http://34.48.15.70:5432</span></div>
+    <div class="env-row"><span class="env-key">PORT / API_PORT</span><span class="env-default">8100</span></div>
+    <div class="env-row"><span class="env-key">MODEL_3D_PORT</span><span class="env-default">8101</span></div>
+  </div>
+</div>
+
+<!-- ─── OBSERVATIONS ─── -->
+<div class="section">
+  <div class="section-title">Architecture Observations</div>
+  <ul class="obs-list">
+    <li class="good"><strong>Lazy singleton init</strong> &mdash; Heavy models (Nomic, CLIP, Groq client) initialized on first use, fast server boot.</li>
+    <li class="good"><strong>Background threading for 3D</strong> &mdash; Generation jobs run in threads, API returns immediately with job_id for polling.</li>
+    <li class="good"><strong>GridFS as CDN</strong> &mdash; GLBs stored in MongoDB so Vercel serverless can serve them without filesystem access.</li>
+    <li class="good"><strong>Graceful degradation</strong> &mdash; RAG falls back to regex search if embedding model isn't loaded.</li>
+    <li class="warn"><strong>In-memory job dict</strong> &mdash; _3d_jobs lost on restart. Job state is not persisted to MongoDB.</li>
+    <li class="warn"><strong>Stub endpoints</strong> &mdash; Several OpenF1/Jolpica endpoints return empty [] or placeholder data.</li>
+    <li class="warn"><strong>Synthetic biometrics</strong> &mdash; mcdriver-summary generates HR/temp from telemetry intensity, not real biometric data.</li>
+    <li class="warn"><strong>Hardcoded GCP IP</strong> &mdash; HUNYUAN_REST_URL defaults to 34.48.15.70:5432 (currently disabled).</li>
+    <li class="warn"><strong>CORS wide open</strong> &mdash; allow_origins=["*"] despite ALLOWED_ORIGINS env var existing.</li>
+  </ul>
+</div>
+
+</div>
+
+<div class="footer">
+  F1 OmniSense Backend Architecture &bull; Generated 2026-02-24 &bull; pipeline/
+</div>
+
+</body>
+</html>

@@ -28,6 +28,7 @@ services:
       - ./pipeline/output:/app/pipeline/output
       - ./output:/app/output
       - ./data:/app/data:ro
+      - ./omnisuitef1:/app/omnisuitef1:ro
       - hf-cache:/root/.cache/huggingface
     healthcheck:
       test: ["CMD", "python", "-c",

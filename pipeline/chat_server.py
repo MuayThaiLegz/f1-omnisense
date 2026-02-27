@@ -23,6 +23,8 @@ from pydantic import BaseModel
 
 # Ensure project root is on path
 sys.path.insert(0, str(Path(__file__).parent.parent))
+# OmniSuite packages
+sys.path.insert(0, str(Path(__file__).parent.parent / "omnisuitef1"))
 
 from dotenv import load_dotenv
 load_dotenv(Path(__file__).parent.parent / ".env")
@@ -1610,6 +1612,22 @@ async def local_catchall(path: str):
         from starlette.responses import PlainTextResponse
         return PlainTextResponse("")
     return []
+
+
+# ── OmniSuite Canary ─────────────────────────────────────────────────────
+
+@app.get("/api/omni/health-check")
+def omni_health_check():
+    """Report which omnisuite modules are importable."""
+    modules = {}
+    for mod in ["omnihealth", "omnirag", "omnianalytics", "omnidoc",
+                "omnidata", "omnivis", "omnikex", "omnibedding", "omnidapt"]:
+        try:
+            __import__(mod)
+            modules[mod] = True
+        except ImportError:
+            modules[mod] = False
+    return {"status": "ok", "modules": modules}
 
 
 # ── Run ──────────────────────────────────────────────────────────────────

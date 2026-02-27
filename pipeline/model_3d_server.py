@@ -48,7 +48,7 @@ class Regenerate3DRequest(BaseModel):
 async def generate_3d_model(
     image: UploadFile = File(...),
     model_name: str = Form(""),
-    provider: str = Form("hunyuan"),
+    provider: str = Form("meshy"),
     textured: bool = Form(False),
     steps: int = Form(30),
     guidance_scale: float = Form(5.0),
@@ -64,8 +64,8 @@ async def generate_3d_model(
     texture_resolution: int = Form(1024),
 ):
     """Submit a 3D model generation job with image upload."""
-    if provider not in ("hunyuan", "meshy", "tripo", "trellis", "texture_paint"):
-        raise HTTPException(status_code=400, detail="Provider must be 'hunyuan', 'meshy', 'tripo', 'trellis', or 'texture_paint'")
+    if provider not in ("hunyuan", "meshy"):
+        raise HTTPException(status_code=400, detail="Provider must be 'hunyuan' or 'meshy'")
 
     if not model_name:
         stem = Path(image.filename).stem if image.filename else "model"
@@ -94,14 +94,14 @@ async def generate_3d_model(
             "enable_pbr": enable_pbr,
             "target_polycount": target_polycount,
         }
-    elif provider == "texture_paint":
-        params = {
-            "material_preset": material_preset or None,
-            "prompt": texture_prompt or None,
-            "n_views": n_views,
-            "texture_resolution": texture_resolution,
-            "seed": seed,
-        }
+    # elif provider == "texture_paint":
+    #     params = {
+    #         "material_preset": material_preset or None,
+    #         "prompt": texture_prompt or None,
+    #         "n_views": n_views,
+    #         "texture_resolution": texture_resolution,
+    #         "seed": seed,
+    #     }
 
     job_id = submit_3d_job(
         model_name=model_name,

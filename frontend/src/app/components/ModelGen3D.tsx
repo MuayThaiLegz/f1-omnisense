@@ -1,17 +1,16 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Upload, Box, Loader2, CheckCircle2, XCircle, RefreshCw,
-  Paintbrush, Download, ChevronDown, Eye, Layers,
-  Cpu, Sparkles, Palette,
+  Paintbrush, Download, Eye, Layers,
+  Sparkles, Cpu,
 } from 'lucide-react';
 import * as api from '../api/model3d';
 import type { MaterialPreset, GeneratedModel, Job, MeshQuality } from '../api/model3d';
 
 // ─── Provider config ────────────────────────────────────────────────
 const PROVIDERS = [
-  { id: 'hunyuan' as const, label: 'Core', sublabel: 'Hunyuan3D', icon: Cpu, color: '#3b82f6', desc: 'Shape generation via Hunyuan3D + PBR materials' },
-  // { id: 'meshy' as const, label: 'Pro', sublabel: 'Meshy.ai', icon: Sparkles, color: '#FF8000', desc: 'Production-quality textured 3D via Meshy API' },
-  { id: 'texture_paint' as const, label: 'Paint', sublabel: 'TEXTure', icon: Palette, color: '#a855f7', desc: 'Local GPU texture painting on existing mesh' },
+  { id: 'hunyuan' as const, label: 'Free', sublabel: 'Hunyuan3D', icon: Cpu, color: '#3b82f6', desc: 'Shape generation via HuggingFace Spaces (free, queued)' },
+  { id: 'meshy' as const, label: 'Pro', sublabel: 'Meshy.ai', icon: Sparkles, color: '#FF8000', desc: 'Production-quality textured 3D via Meshy API' },
 ] as const;
 
 type Provider = typeof PROVIDERS[number]['id'];
@@ -26,11 +25,8 @@ export function ModelGen3D() {
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Provider options
-  const [textured, setTextured] = useState(false);
-  const [materialPreset, setMaterialPreset] = useState('carbon_fiber');
-  const [texturePrompt, setTexturePrompt] = useState('');
-  const [enablePbr, setEnablePbr] = useState(true);
+  // Meshy options
+  const [enablePbr] = useState(true);
 
   // Job tracking
   const [activeJob, setActiveJob] = useState<Job | null>(null);
@@ -38,18 +34,14 @@ export function ModelGen3D() {
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Data
-  const [presets, setPresets] = useState<MaterialPreset[]>([]);
   const [models, setModels] = useState<GeneratedModel[]>([]);
   const [viewingModel, setViewingModel] = useState<string | null>(null);
-  const [viewingProvider, setViewingProvider] = useState<string>('hunyuan');
+  const [viewingProvider, setViewingProvider] = useState<string>('meshy');
   const [quality, setQuality] = useState<MeshQuality | null>(null);
-  const [texturePaintAvail, setTexturePaintAvail] = useState<boolean | null>(null);
 
-  // Load presets + models on mount
+  // Load models on mount
   useEffect(() => {
-    api.getMaterialPresets().then(r => setPresets(r.presets)).catch(() => {});
     api.listModels().then(r => setModels(r.models)).catch(() => {});
-    api.getTexturePaintStatus().then(r => setTexturePaintAvail(r.available)).catch(() => setTexturePaintAvail(false));
   }, []);
 
   // Cleanup poll on unmount
@@ -82,10 +74,10 @@ export function ModelGen3D() {
         image: imageFile,
         model_name: modelName || undefined,
         provider,
-        textured: provider === 'hunyuan' ? textured : undefined,
-        texture_prompt: texturePrompt || undefined,
+        textured: undefined,
+        texture_prompt: undefined,
         enable_pbr: enablePbr || undefined,
-        material_preset: materialPreset || undefined,
+        material_preset: undefined,
       });
 
       // Start polling
@@ -262,93 +254,32 @@ export function ModelGen3D() {
             Generation Options
           </h3>
 
-          {/* Provider buttons */}
-          <div className="grid grid-cols-3 gap-2 mb-4">
-            {PROVIDERS.map((p) => {
-              const Icon = p.icon;
-              const disabled = p.id === 'texture_paint' && texturePaintAvail === false;
-              return (
-                <button
-                  key={p.id}
-                  onClick={() => !disabled && setProvider(p.id)}
-                  disabled={disabled}
-                  className={`relative rounded-lg p-3 text-center transition-all border ${
-                    provider === p.id
-                      ? 'border-current bg-current/10'
-                      : disabled
-                        ? 'border-[rgba(255,128,0,0.12)] bg-[#0D1117] opacity-40 cursor-not-allowed'
-                        : 'border-[rgba(255,128,0,0.12)] bg-[#0D1117] hover:border-[rgba(255,128,0,0.2)]'
-                  }`}
-                  style={provider === p.id ? { color: p.color, borderColor: p.color } : undefined}
-                >
-                  <Icon className="w-4 h-4 mx-auto mb-1" style={provider === p.id ? { color: p.color } : undefined} />
-                  <div className="text-[12px] font-medium" style={provider === p.id ? { color: p.color } : undefined}>{p.label}</div>
-                  <div className="text-[11px] text-muted-foreground">{p.sublabel}</div>
-                </button>
-              );
-            })}
+          {/* Provider picker */}
+          <div className="flex gap-2 mb-3">
+            {PROVIDERS.map((p) => (
+              <button
+                type="button"
+                key={p.id}
+                onClick={() => setProvider(p.id)}
+                className="flex-1 flex items-center gap-2 px-3 py-2 rounded-lg text-[12px] font-medium transition-all border"
+                style={{
+                  background: provider === p.id ? `${p.color}15` : 'transparent',
+                  borderColor: provider === p.id ? `${p.color}44` : 'rgba(255,128,0,0.12)',
+                  color: provider === p.id ? p.color : 'var(--muted-foreground)',
+                }}
+              >
+                <p.icon className="w-3.5 h-3.5" />
+                <div className="text-left">
+                  <div>{p.sublabel}</div>
+                  <div className="opacity-60">{p.label}</div>
+                </div>
+              </button>
+            ))}
           </div>
 
           <p className="text-[12px] text-muted-foreground mb-3">
             {PROVIDERS.find(p => p.id === provider)?.desc}
           </p>
-
-          {/* Hunyuan options */}
-          {provider === 'hunyuan' && (
-            <div className="space-y-2">
-              <label className="flex items-center gap-2 text-[12px] text-muted-foreground cursor-pointer">
-                <input type="checkbox" checked={textured} onChange={(e) => setTextured(e.target.checked)}
-                  className="rounded border-[rgba(255,128,0,0.2)] bg-[#0D1117] text-[#FF8000] focus:ring-[#FF8000]/30 w-3 h-3" />
-                Generate with texture (slower, full color)
-              </label>
-              {!textured && (
-                <div>
-                  <label className="text-[12px] text-muted-foreground mb-1 block">PBR Material Preset</label>
-                  <div className="relative">
-                    <select
-                      value={materialPreset}
-                      onChange={(e) => setMaterialPreset(e.target.value)}
-                      className="w-full bg-[#0D1117] border border-[rgba(255,128,0,0.12)] rounded-lg px-3 py-1.5 text-sm text-foreground appearance-none focus:outline-none focus:border-[#FF8000]/40"
-                    >
-                      {presets.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
-                    </select>
-                    <ChevronDown className="w-3 h-3 absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Meshy options — disabled, provider commented out */}
-
-          {/* TEXTure options */}
-          {provider === 'texture_paint' && (
-            <div className="space-y-2">
-              <div>
-                <label className="text-[12px] text-muted-foreground mb-1 block">Paint Prompt</label>
-                <input
-                  type="text"
-                  value={texturePrompt}
-                  onChange={(e) => setTexturePrompt(e.target.value)}
-                  placeholder="e.g. Formula 1 car with McLaren papaya livery"
-                  className="w-full bg-[#0D1117] border border-[rgba(255,128,0,0.12)] rounded-lg px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-[#FF8000]/40"
-                />
-              </div>
-              <div>
-                <label className="text-[12px] text-muted-foreground mb-1 block">Material Preset</label>
-                <div className="relative">
-                  <select
-                    value={materialPreset}
-                    onChange={(e) => setMaterialPreset(e.target.value)}
-                    className="w-full bg-[#0D1117] border border-[rgba(255,128,0,0.12)] rounded-lg px-3 py-1.5 text-sm text-foreground appearance-none focus:outline-none focus:border-[#FF8000]/40"
-                  >
-                    {presets.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
-                  </select>
-                  <ChevronDown className="w-3 h-3 absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* Submit button */}
           <button
@@ -514,20 +445,20 @@ export function ModelGen3D() {
                   )}
                   {m.has_hunyuan && !m.has_pbr && (
                     <button
-                      onClick={() => handleApplyPbr(m.model_name, materialPreset)}
+                      onClick={() => handleApplyPbr(m.model_name, 'carbon_fiber')}
                       className="flex items-center gap-1 px-2 py-1 rounded text-[11px] bg-green-500/10 text-green-400 hover:bg-green-500/20 transition-all"
                     >
                       <Paintbrush className="w-2.5 h-2.5" /> +PBR
                     </button>
                   )}
-                  {!m.has_meshy && (
+                  {/* {!m.has_meshy && (
                     <button
                       onClick={() => handleRegenMeshy(m.model_name)}
                       className="flex items-center gap-1 px-2 py-1 rounded text-[11px] bg-[#FF8000]/10 text-[#FF8000] hover:bg-[#FF8000]/20 transition-all"
                     >
                       <RefreshCw className="w-2.5 h-2.5" /> +Pro
                     </button>
-                  )}
+                  )} */}
                   <button
                     onClick={() => handleViewQuality(m.model_name)}
                     className="flex items-center gap-1 px-2 py-1 rounded text-[11px] bg-[#222838] text-muted-foreground hover:text-foreground transition-all"

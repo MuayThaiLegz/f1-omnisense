@@ -41,7 +41,7 @@ def generate_3d_hunyuan(model_name: str, image_path: Path,
     Returns:
         Dict with output paths and metadata.
     """
-    from .hunyuan_client import get_hunyuan_client
+    from .hunyuan_hf_client import get_hunyuan_hf_client as get_hunyuan_client
 
     if output_dir is None:
         output_dir = MODELS_3D_DIR / model_name

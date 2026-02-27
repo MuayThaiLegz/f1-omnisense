@@ -3,6 +3,7 @@ import {
   AlertTriangle, CheckCircle2, XCircle, Activity,
   Thermometer, Gauge, Zap, CircleDot, Shield, TrendingUp,
   Cpu, Disc, Cog, Wrench, ShieldAlert, Eye, FileText, Bell,
+  Plus, X, Car, Save,
 } from 'lucide-react';
 import { ModelGen3D } from './ModelGen3D';
 
@@ -152,11 +153,73 @@ const DRIVER_CAR_MODEL: Record<number, { label: string; url: string }> = {
 // NOTE: Car3DViewer standalone section removed from fleet grid view.
 // ModelGen3D (AI 3D generation) can be re-enabled in a settings/admin panel.
 
+// ─── Registered vehicle type ────────────────────────────────────────
+interface RegisteredVehicle {
+  model: string;
+  driverName: string;
+  driverNumber: number;
+  driverCode: string;
+  teamName: string;
+  chassisId: string;
+  engineSpec: string;
+  season: number;
+  notes: string;
+  createdAt: string;
+}
+
+const EMPTY_FORM: Omit<RegisteredVehicle, 'createdAt'> = {
+  model: '', driverName: '', driverNumber: 0, driverCode: '',
+  teamName: 'McLaren', chassisId: '', engineSpec: '', season: new Date().getFullYear(), notes: '',
+};
+
 // ─── Component ──────────────────────────────────────────────────────
 export function FleetOverview() {
   const [vehicles, setVehicles] = useState<VehicleData[]>([]);
   const [selectedCar, setSelectedCar] = useState<VehicleData | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Registration state
+  const [showRegister, setShowRegister] = useState(false);
+  const [regForm, setRegForm] = useState(EMPTY_FORM);
+  const [registeredVehicles, setRegisteredVehicles] = useState<RegisteredVehicle[]>([]);
+  const [submitting, setSubmitting] = useState(false);
+  const [regError, setRegError] = useState('');
+
+  // Fetch registered vehicles
+  useEffect(() => {
+    fetch('/api/fleet-vehicles')
+      .then(r => r.json())
+      .then(data => { if (Array.isArray(data)) setRegisteredVehicles(data); })
+      .catch(() => {});
+  }, []);
+
+  const handleRegister = async () => {
+    if (!regForm.model || !regForm.driverName || !regForm.driverNumber || !regForm.driverCode) {
+      setRegError('Model, driver name, number, and code are required.');
+      return;
+    }
+    setSubmitting(true);
+    setRegError('');
+    try {
+      const res = await fetch('/api/fleet-vehicles', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(regForm),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Registration failed');
+      }
+      const created = await res.json();
+      setRegisteredVehicles(prev => [created, ...prev]);
+      setRegForm(EMPTY_FORM);
+      setShowRegister(false);
+    } catch (e: any) {
+      setRegError(e.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   useEffect(() => {
     const load = async () => {
@@ -242,7 +305,7 @@ export function FleetOverview() {
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2 bg-[#1A1F2E] rounded-lg px-3 py-2 border border-[rgba(255,128,0,0.12)]">
           <CircleDot className="w-3 h-3 text-[#FF8000]" />
-          <span className="text-[12px] text-muted-foreground">{vehicles.length} vehicles</span>
+          <span className="text-[12px] text-muted-foreground">{vehicles.length + registeredVehicles.length} vehicles</span>
         </div>
         {(['nominal', 'warning', 'critical'] as HealthLevel[]).map(level => {
           const count = vehicles.filter(v => v.level === level).length;
@@ -254,6 +317,14 @@ export function FleetOverview() {
             </div>
           );
         })}
+        <button
+          type="button"
+          onClick={() => setShowRegister(true)}
+          className="ml-auto flex items-center gap-1.5 bg-[#FF8000] hover:bg-[#FF8000]/80 text-black text-[12px] font-medium rounded-lg px-3 py-2 transition-colors"
+        >
+          <Plus className="w-3.5 h-3.5" />
+          Register Car
+        </button>
       </div>
 
       {/* Driver cards — always visible, clickable to select */}
@@ -486,8 +557,178 @@ export function FleetOverview() {
         </div>
       )}
 
+      {/* ─── Registered Vehicles ─────────────────────────────────────── */}
+      {registeredVehicles.length > 0 && (
+        <div>
+          <h3 className="text-sm font-medium text-foreground mb-3 flex items-center gap-2">
+            <Car className="w-3.5 h-3.5 text-[#FF8000]" />
+            Registered Vehicles
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {registeredVehicles.map((rv, i) => (
+              <div key={i} className="bg-[#1A1F2E] rounded-xl border border-[rgba(255,128,0,0.12)] p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-[#FF8000]/10 border border-[#FF8000]/20 flex items-center justify-center text-[12px] font-bold font-mono text-[#FF8000]">
+                      #{rv.driverNumber}
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium text-foreground">{rv.driverName}</div>
+                      <div className="text-[11px] text-muted-foreground">{rv.teamName} {rv.model}</div>
+                    </div>
+                  </div>
+                  <span className="text-[10px] text-muted-foreground bg-[#0D1117] px-2 py-0.5 rounded font-mono">{rv.driverCode}</span>
+                </div>
+                <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[11px] mt-2">
+                  {rv.chassisId && (
+                    <><span className="text-muted-foreground">Chassis</span><span className="text-foreground font-mono">{rv.chassisId}</span></>
+                  )}
+                  {rv.engineSpec && (
+                    <><span className="text-muted-foreground">Engine</span><span className="text-foreground font-mono">{rv.engineSpec}</span></>
+                  )}
+                  <span className="text-muted-foreground">Season</span><span className="text-foreground font-mono">{rv.season}</span>
+                </div>
+                {rv.notes && (
+                  <p className="text-[11px] text-muted-foreground mt-2 italic border-t border-[rgba(255,128,0,0.06)] pt-2">{rv.notes}</p>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* AI 3D Model Generation */}
       <ModelGen3D />
+
+      {/* ─── Registration Modal ───────────────────────────────────────── */}
+      {showRegister && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-[#1A1F2E] border border-[rgba(255,128,0,0.2)] rounded-2xl w-full max-w-lg mx-4 shadow-2xl">
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-[rgba(255,128,0,0.12)]">
+              <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                <Car className="w-4 h-4 text-[#FF8000]" />
+                Register New Car
+              </h2>
+              <button type="button" title="Close" onClick={() => { setShowRegister(false); setRegError(''); }} className="text-muted-foreground hover:text-foreground">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Form */}
+            <div className="px-5 py-4 space-y-3 max-h-[70vh] overflow-y-auto">
+              {regError && (
+                <div className="text-[12px] text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg px-3 py-2">
+                  {regError}
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-3">
+                <label className="space-y-1">
+                  <span className="text-[11px] text-muted-foreground">Car Model *</span>
+                  <input
+                    type="text" placeholder="MCL38"
+                    value={regForm.model} onChange={e => setRegForm(f => ({ ...f, model: e.target.value }))}
+                    className="w-full bg-[#0D1117] border border-[rgba(255,128,0,0.15)] rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-[#FF8000]/50"
+                  />
+                </label>
+                <label className="space-y-1">
+                  <span className="text-[11px] text-muted-foreground">Team Name</span>
+                  <input
+                    type="text" placeholder="McLaren"
+                    value={regForm.teamName} onChange={e => setRegForm(f => ({ ...f, teamName: e.target.value }))}
+                    className="w-full bg-[#0D1117] border border-[rgba(255,128,0,0.15)] rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-[#FF8000]/50"
+                  />
+                </label>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <label className="space-y-1">
+                  <span className="text-[11px] text-muted-foreground">Driver Name *</span>
+                  <input
+                    type="text" placeholder="Lando Norris"
+                    value={regForm.driverName} onChange={e => setRegForm(f => ({ ...f, driverName: e.target.value }))}
+                    className="w-full bg-[#0D1117] border border-[rgba(255,128,0,0.15)] rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-[#FF8000]/50"
+                  />
+                </label>
+                <label className="space-y-1">
+                  <span className="text-[11px] text-muted-foreground">Number *</span>
+                  <input
+                    type="number" placeholder="4"
+                    value={regForm.driverNumber || ''} onChange={e => setRegForm(f => ({ ...f, driverNumber: Number(e.target.value) }))}
+                    className="w-full bg-[#0D1117] border border-[rgba(255,128,0,0.15)] rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-[#FF8000]/50"
+                  />
+                </label>
+                <label className="space-y-1">
+                  <span className="text-[11px] text-muted-foreground">Code *</span>
+                  <input
+                    type="text" placeholder="NOR" maxLength={3}
+                    value={regForm.driverCode} onChange={e => setRegForm(f => ({ ...f, driverCode: e.target.value.toUpperCase() }))}
+                    className="w-full bg-[#0D1117] border border-[rgba(255,128,0,0.15)] rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-[#FF8000]/50 uppercase"
+                  />
+                </label>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <label className="space-y-1">
+                  <span className="text-[11px] text-muted-foreground">Chassis ID</span>
+                  <input
+                    type="text" placeholder="MCL38-001"
+                    value={regForm.chassisId} onChange={e => setRegForm(f => ({ ...f, chassisId: e.target.value }))}
+                    className="w-full bg-[#0D1117] border border-[rgba(255,128,0,0.15)] rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-[#FF8000]/50"
+                  />
+                </label>
+                <label className="space-y-1">
+                  <span className="text-[11px] text-muted-foreground">Season</span>
+                  <input
+                    type="number" placeholder="2024"
+                    value={regForm.season} onChange={e => setRegForm(f => ({ ...f, season: Number(e.target.value) }))}
+                    className="w-full bg-[#0D1117] border border-[rgba(255,128,0,0.15)] rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-[#FF8000]/50"
+                  />
+                </label>
+              </div>
+
+              <label className="space-y-1 block">
+                <span className="text-[11px] text-muted-foreground">Engine Spec</span>
+                <input
+                  type="text" placeholder="Mercedes-AMG F1 M14"
+                  value={regForm.engineSpec} onChange={e => setRegForm(f => ({ ...f, engineSpec: e.target.value }))}
+                  className="w-full bg-[#0D1117] border border-[rgba(255,128,0,0.15)] rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-[#FF8000]/50"
+                />
+              </label>
+
+              <label className="space-y-1 block">
+                <span className="text-[11px] text-muted-foreground">Notes</span>
+                <textarea
+                  rows={2} placeholder="Additional notes..."
+                  value={regForm.notes} onChange={e => setRegForm(f => ({ ...f, notes: e.target.value }))}
+                  className="w-full bg-[#0D1117] border border-[rgba(255,128,0,0.15)] rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-[#FF8000]/50 resize-none"
+                />
+              </label>
+            </div>
+
+            {/* Footer */}
+            <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-[rgba(255,128,0,0.12)]">
+              <button
+                type="button"
+                onClick={() => { setShowRegister(false); setRegError(''); }}
+                className="px-4 py-2 text-[12px] text-muted-foreground hover:text-foreground rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleRegister}
+                disabled={submitting}
+                className="flex items-center gap-1.5 px-4 py-2 bg-[#FF8000] hover:bg-[#FF8000]/80 disabled:opacity-50 text-black text-[12px] font-medium rounded-lg transition-colors"
+              >
+                <Save className="w-3.5 h-3.5" />
+                {submitting ? 'Registering...' : 'Register'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

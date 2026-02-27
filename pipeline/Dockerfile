@@ -21,6 +21,11 @@ RUN pip install --no-cache-dir -r /tmp/requirements.txt
 ARG SOURCE_BUST=v3
 COPY pipeline/ /app/pipeline/
 
+# Copy omnisuite packages + install deps
+COPY omnisuitef1/ /app/omnisuitef1/
+COPY omnisuitef1/requirements.txt /tmp/omnisuite-requirements.txt
+RUN pip install --no-cache-dir -r /tmp/omnisuite-requirements.txt
+
 EXPOSE 8100
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=90s --retries=3 \

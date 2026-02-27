@@ -390,6 +390,95 @@ Guidelines:
   };
 }
 
+/** Fleet vehicles CRUD — dev middleware backed by MongoDB */
+function fleetVehiclesPlugin() {
+  return {
+    name: 'fleet-vehicles-api',
+    configureServer(server: any) {
+      server.middlewares.use('/api/fleet-vehicles', async (req: any, res: any, next: any) => {
+        // Dynamically import mongodb (already a project dependency)
+        const { MongoClient } = await import('mongodb');
+
+        // Load env
+        const f1Root = path.resolve(__dirname, '..');
+        const envPath = path.join(f1Root, '.env');
+        let mongoUri = process.env.MONGODB_URI || '';
+        let mongoDb = process.env.MONGODB_DB || 'McLaren_f1';
+        if (!mongoUri && fs.existsSync(envPath)) {
+          const envContent = fs.readFileSync(envPath, 'utf-8');
+          const uriMatch = envContent.match(/^MONGODB_URI=(.+)$/m);
+          if (uriMatch) mongoUri = uriMatch[1].trim();
+          const dbMatch = envContent.match(/^MONGODB_DB=(.+)$/m);
+          if (dbMatch) mongoDb = dbMatch[1].trim();
+        }
+
+        if (!mongoUri) {
+          res.statusCode = 500;
+          res.end(JSON.stringify({ error: 'MONGODB_URI not configured' }));
+          return;
+        }
+
+        const client = new MongoClient(mongoUri);
+        try {
+          await client.connect();
+          const col = client.db(mongoDb).collection('fleet_vehicles');
+
+          if (req.method === 'GET') {
+            const vehicles = await col.find({}, { projection: { _id: 0 } })
+              .sort({ createdAt: -1 })
+              .toArray();
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify(vehicles));
+            return;
+          }
+
+          if (req.method === 'POST') {
+            let body = '';
+            for await (const chunk of req) body += chunk;
+            let parsed: any;
+            try { parsed = JSON.parse(body); } catch { res.statusCode = 400; res.end('Bad JSON'); return; }
+
+            const { model, driverName, driverNumber, driverCode, teamName, chassisId, engineSpec, season, notes } = parsed;
+            if (!model || !driverName || !driverNumber || !driverCode) {
+              res.statusCode = 400;
+              res.end(JSON.stringify({ error: 'Missing required fields: model, driverName, driverNumber, driverCode' }));
+              return;
+            }
+
+            const doc = {
+              model: String(model),
+              driverName: String(driverName),
+              driverNumber: Number(driverNumber),
+              driverCode: String(driverCode).toUpperCase().slice(0, 3),
+              teamName: String(teamName || 'McLaren'),
+              chassisId: String(chassisId || ''),
+              engineSpec: String(engineSpec || ''),
+              season: Number(season) || new Date().getFullYear(),
+              notes: String(notes || ''),
+              createdAt: new Date(),
+            };
+
+            await col.insertOne(doc);
+            res.statusCode = 201;
+            res.setHeader('Content-Type', 'application/json');
+            const { _id, ...safe } = doc as any;
+            res.end(JSON.stringify(safe));
+            return;
+          }
+
+          res.statusCode = 405;
+          res.end(JSON.stringify({ error: 'Method not allowed' }));
+        } catch (err: any) {
+          res.statusCode = 500;
+          res.end(JSON.stringify({ error: err.message }));
+        } finally {
+          await client.close();
+        }
+      });
+    },
+  };
+}
+
 /** Cache large static assets (GLB models) — tells browser to keep them for 1 day */
 function cacheGLBPlugin() {
   return {
@@ -411,6 +500,7 @@ export default defineConfig({
     tailwindcss(),
     localDataPlugin(),
     genUIPlugin(),
+    fleetVehiclesPlugin(),
     cacheGLBPlugin(),
   ],
   resolve: {
@@ -460,6 +550,17 @@ export default defineConfig({
         target: 'http://localhost:8100',
         changeOrigin: true,
       },
+      '/api/omni': {
+        target: 'http://localhost:8100',
+        changeOrigin: true,
+      },
+      '/api/jolpica': { target: 'http://localhost:8100', changeOrigin: true, rewrite: (path: string) => path.replace(/^\/api\//, '/api/local/') },
+      '/api/openf1': { target: 'http://localhost:8100', changeOrigin: true, rewrite: (path: string) => path.replace(/^\/api\//, '/api/local/') },
+      '/api/pipeline': { target: 'http://localhost:8100', changeOrigin: true, rewrite: (path: string) => path.replace(/^\/api\//, '/api/local/') },
+      '/api/f1data': { target: 'http://localhost:8100', changeOrigin: true, rewrite: (path: string) => path.replace(/^\/api\//, '/api/local/') },
+      '/api/mccar': { target: 'http://localhost:8100', changeOrigin: true, rewrite: (path: string) => path.replace(/^\/api\//, '/api/local/') },
+      '/api/mcdriver': { target: 'http://localhost:8100', changeOrigin: true, rewrite: (path: string) => path.replace(/^\/api\//, '/api/local/') },
+      '/api/mcracecontext': { target: 'http://localhost:8100', changeOrigin: true, rewrite: (path: string) => path.replace(/^\/api\//, '/api/local/') },
       '/3d-models': {
         target: 'http://localhost:8100',
         changeOrigin: true,
