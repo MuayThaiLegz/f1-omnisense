@@ -163,12 +163,15 @@ def visualize_driver(
     if len(embeddings) < 3:
         raise HTTPException(400, f"Not enough data points for {driver_code}")
 
+    # Force PCA for small datasets (t-SNE perplexity requires n_samples > 30)
+    effective_method = method if len(embeddings) > 30 else "pca"
+
     result = _visualize(
         embeddings=embeddings,
         labels=labels,
         categories=[driver_code] * len(labels),
         n_components=n_components,
-        method=method,
+        method=effective_method,
         n_clusters=min(n_clusters, len(embeddings) // 2),
         output="json",
     )

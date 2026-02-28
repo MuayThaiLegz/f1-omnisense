@@ -122,8 +122,8 @@ async def embed_image(image: UploadFile = File(...)):
     frame = _read_image(await image.read())
     embedding = embed_clip(frame)
     return {
-        "vector": embedding.vector,
-        "dimensions": len(embedding.vector),
+        "vector": embedding,
+        "dimensions": len(embedding),
         "source": "image",
     }
 
@@ -139,8 +139,8 @@ def embed_text(req: TextEmbedRequest):
 
     embedding = _embed_text(req.text)
     return {
-        "vector": embedding.vector,
-        "dimensions": len(embedding.vector),
+        "vector": embedding,
+        "dimensions": len(embedding),
         "source": "text",
         "text": req.text,
     }
